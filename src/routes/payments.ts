@@ -1,7 +1,22 @@
-import type { FastifyPluginAsync } from 'fastify'
+import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { getActiveServiceById } from '../db/services.js'
+
+const apiErrorCodeSchema = z.enum([
+  'VALIDATION_ERROR',
+  'SERVICE_NOT_FOUND',
+  'SERVICE_INACTIVE',
+  'PAYMENT_NOT_FOUND',
+  'PAYMENT_INSUFFICIENT',
+  'PAYMENT_RECIPIENT_MISMATCH',
+  'MEMO_MISMATCH',
+  'REPLAY_DETECTED',
+  'DOWNSTREAM_ERROR',
+  'VERIFICATION_NOT_IMPLEMENTED',
+])
+
+type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>
 
 const quoteRequestSchema = z.object({
   serviceId: z.string().min(1),
@@ -18,41 +33,57 @@ const quoteResponseSchema = z.object({
   chainId: z.number().int(),
 })
 
+const executeRequestSchema = z.object({
+  serviceId: z.string().min(1),
+  requestId: z.string().min(1).max(128),
+  paymentTxHash: z
+    .string()
+    .regex(/^0x[a-fA-F0-9]{64}$/, 'paymentTxHash must be a 32-byte hex transaction hash'),
+  payload: z.record(z.string(), z.unknown()),
+})
+
+function sendError(
+  reply: FastifyReply,
+  statusCode: number,
+  code: ApiErrorCode,
+  message: string,
+  requestId?: string,
+  details?: unknown,
+) {
+  return reply.status(statusCode).send({
+    ok: false,
+    requestId,
+    error: {
+      code,
+      message,
+      details,
+    },
+  })
+}
+
 export const paymentRoutes: FastifyPluginAsync = async (app) => {
   app.post('/payments/quote', async (request, reply) => {
     const parsed = quoteRequestSchema.safeParse(request.body)
     if (!parsed.success) {
-      return reply.status(400).send({
-        ok: false,
-        error: {
-          code: 'VALIDATION_ERROR',
-          message: 'Invalid quote request payload',
-          details: parsed.error.flatten(),
-        },
-      })
+      return sendError(
+        reply,
+        400,
+        'VALIDATION_ERROR',
+        'Invalid quote request payload',
+        undefined,
+        parsed.error.flatten(),
+      )
     }
 
     const { serviceId } = parsed.data
     const service = await getActiveServiceById(serviceId)
 
     if (!service) {
-      return reply.status(404).send({
-        ok: false,
-        error: {
-          code: 'SERVICE_NOT_FOUND',
-          message: 'Service does not exist',
-        },
-      })
+      return sendError(reply, 404, 'SERVICE_NOT_FOUND', 'Service does not exist')
     }
 
     if (!service.active) {
-      return reply.status(403).send({
-        ok: false,
-        error: {
-          code: 'SERVICE_INACTIVE',
-          message: 'Service is not active',
-        },
-      })
+      return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active')
     }
 
     const response = {
@@ -67,5 +98,38 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
 
     const checked = quoteResponseSchema.parse(response)
     return reply.status(200).send(checked)
+  })
+
+  app.post('/payments/execute', async (request, reply) => {
+    const parsed = executeRequestSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return sendError(
+        reply,
+        400,
+        'VALIDATION_ERROR',
+        'Invalid execute request payload',
+        undefined,
+        parsed.error.flatten(),
+      )
+    }
+
+    const { serviceId, requestId } = parsed.data
+    const service = await getActiveServiceById(serviceId)
+
+    if (!service) {
+      return sendError(reply, 404, 'SERVICE_NOT_FOUND', 'Service does not exist', requestId)
+    }
+
+    if (!service.active) {
+      return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active', requestId)
+    }
+
+    return sendError(
+      reply,
+      501,
+      'VERIFICATION_NOT_IMPLEMENTED',
+      'Payment verification and execution flow will be added in Step 6 and Step 8',
+      requestId,
+    )
   })
 }

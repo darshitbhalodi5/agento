@@ -17,10 +17,10 @@
 ## Step 4 (done)
 - Implement `POST /v1/payments/quote`
 
-## Step 5 (next)
+## Step 5 (done)
 - Implement `POST /v1/payments/execute` skeleton (validation + error model)
 
-## Step 6
+## Step 6 (next)
 - Add Tempo payment verification (receipt/event parsing)
 
 ## Step 7
