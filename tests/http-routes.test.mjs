@@ -33,6 +33,7 @@ test('GET /v1/app returns frontend html shell', async () => {
     assert.equal(res.statusCode, 200)
     assert.ok(String(res.headers['content-type']).includes('text/html'))
     assert.match(res.body, /Agento Demo Console/)
+    assert.match(res.body, /Guided Demo Mode/)
   } finally {
     await app.close()
   }

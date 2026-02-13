@@ -117,6 +117,15 @@ Includes:
 - Request status lookup (`GET /v1/requests/:requestId?serviceId=...`)
 - Quick links to telemetry dashboard and health endpoint
 
+## Step 12 Polish
+Added:
+- guided demo mode presets (happy-path and error-path inputs) in `/v1/app`
+- one-click helpers for quote and status actions
+- submission walkthrough/checklist doc
+
+Walkthrough doc:
+- `docs/SUBMISSION_WALKTHROUGH.md`
+
 ## Step 10 Test Coverage
 Current automated tests cover:
 - `GET /v1/health` success path

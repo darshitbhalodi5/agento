@@ -20,6 +20,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       --agento-slate-200: #E2E8F0;
       --agento-error: #DC2626;
       --agento-success: #16A34A;
+      --agento-warning: #D97706;
     }
     * { box-sizing: border-box; }
     body {
@@ -30,7 +31,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
     }
     .wrap {
       max-width: 1150px;
-      margin: 22px auto;
+      margin: 20px auto;
       padding: 0 16px;
     }
     .hero {
@@ -38,7 +39,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       background: linear-gradient(135deg, #0B1220 0%, #0E1E3A 45%, #19C2FF 100%);
       color: var(--agento-white);
       padding: 22px;
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .hero h1 { margin: 0; font-size: 28px; }
     .hero p { margin: 8px 0 0; opacity: .93; }
@@ -51,6 +52,50 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       padding: 7px 12px;
       font-size: 13px;
     }
+
+    .guide {
+      border: 1px solid var(--agento-slate-200);
+      background: #fff;
+      border-radius: 14px;
+      padding: 12px;
+      margin-bottom: 12px;
+    }
+    .guide h2 {
+      margin: 0 0 10px;
+      font-size: 17px;
+      color: var(--agento-navy);
+    }
+    .guide-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .guide button {
+      border: 1px solid var(--agento-slate-200);
+      border-radius: 9px;
+      background: #fff;
+      color: var(--agento-navy);
+      padding: 8px 10px;
+      cursor: pointer;
+      font-weight: 600;
+      font-size: 13px;
+    }
+    .guide button.primary {
+      background: var(--agento-navy);
+      color: #fff;
+      border-color: var(--agento-navy);
+    }
+    .guide button.warn {
+      background: #fff7ed;
+      border-color: #fed7aa;
+      color: var(--agento-warning);
+    }
+    .guide .note {
+      font-size: 12px;
+      color: var(--agento-slate-500);
+    }
+
     .layout {
       display: grid;
       gap: 12px;
@@ -85,7 +130,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       background: #fff;
     }
     .field textarea { min-height: 88px; resize: vertical; font-family: "IBM Plex Mono", monospace; }
-    button {
+    button.main {
       border: 0;
       border-radius: 10px;
       padding: 10px 14px;
@@ -137,6 +182,19 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       </div>
     </section>
 
+    <section class="guide">
+      <h2>Guided Demo Mode</h2>
+      <div class="guide-row">
+        <button id="preset-happy" type="button" class="primary">Preset: Happy Path Inputs</button>
+        <button id="preset-error" type="button" class="warn">Preset: Error Path Inputs</button>
+        <button id="run-quote" type="button">Run Quote</button>
+        <button id="run-status" type="button">Run Status Lookup</button>
+      </div>
+      <div class="note">
+        Happy path requires a real Tempo transaction hash with memo hash <code>keccak256(api:v1:{serviceId}:{requestId})</code>.
+      </div>
+    </section>
+
     <section class="layout">
       <article class="panel">
         <h2>1) Get Quote</h2>
@@ -151,7 +209,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
               <input id="quote-endpoint" name="endpoint" value="/forecast/7d" required />
             </div>
           </div>
-          <button type="submit">Request Quote</button>
+          <button type="submit" class="main">Request Quote</button>
         </form>
         <div id="quote-status" class="tips"></div>
         <pre id="quote-result" class="result">No quote yet.</pre>
@@ -178,7 +236,7 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
             <label for="exec-payload">Payload JSON</label>
             <textarea id="exec-payload" name="payload">{"location":"NYC"}</textarea>
           </div>
-          <button type="submit" class="alt">Verify + Execute</button>
+          <button type="submit" class="main alt">Verify + Execute</button>
         </form>
         <div id="execute-status" class="tips"></div>
         <pre id="execute-result" class="result">No execution yet.</pre>
@@ -197,19 +255,19 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
               <input id="status-request" name="requestId" value="req_demo_001" required />
             </div>
           </div>
-          <button type="submit">Fetch Status</button>
+          <button type="submit" class="main">Fetch Status</button>
         </form>
         <div id="status-status" class="tips"></div>
         <pre id="status-result" class="result">No status fetched.</pre>
       </article>
 
       <article class="panel">
-        <h2>Flow Hints</h2>
+        <h2>Pitch Notes</h2>
         <div class="tips">
-          <div>Use Quote first to confirm service config.</div>
-          <div>Execute requires a real Tempo tx hash + correct memo to pass verification.</div>
-          <div>Memo convention: <code>keccak256(api:v1:{serviceId}:{requestId})</code>.</div>
-          <div>After execute, use Request Status and Dashboard for proof evidence.</div>
+          <div>1. Show Quote response and payment instructions.</div>
+          <div>2. Show Execute response (valid or controlled failure).</div>
+          <div>3. Show audit state from Request Status.</div>
+          <div>4. Open Dashboard for system-level proof.</div>
         </div>
       </article>
     </section>
@@ -242,6 +300,38 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
     const quoteResult = document.getElementById('quote-result')
     const quoteStatus = document.getElementById('quote-status')
 
+    const executeForm = document.getElementById('execute-form')
+    const executeResult = document.getElementById('execute-result')
+    const executeStatus = document.getElementById('execute-status')
+
+    const statusForm = document.getElementById('status-form')
+    const statusResult = document.getElementById('status-result')
+    const statusStatus = document.getElementById('status-status')
+
+    function fillHappyPreset() {
+      const requestId = 'req_demo_happy_' + Date.now()
+      document.getElementById('quote-service').value = 'weather-api'
+      document.getElementById('quote-endpoint').value = '/forecast/7d'
+      document.getElementById('exec-service').value = 'weather-api'
+      document.getElementById('exec-request').value = requestId
+      document.getElementById('exec-tx').value = '0xREPLACE_WITH_REAL_TEMPO_TX_HASH'
+      document.getElementById('exec-payload').value = JSON.stringify({ location: 'NYC' })
+      document.getElementById('status-service').value = 'weather-api'
+      document.getElementById('status-request').value = requestId
+    }
+
+    function fillErrorPreset() {
+      const requestId = 'req_demo_error_' + Date.now()
+      document.getElementById('quote-service').value = 'weather-api'
+      document.getElementById('quote-endpoint').value = '/forecast/7d'
+      document.getElementById('exec-service').value = 'weather-api'
+      document.getElementById('exec-request').value = requestId
+      document.getElementById('exec-tx').value = '0x1111111111111111111111111111111111111111111111111111111111111111'
+      document.getElementById('exec-payload').value = JSON.stringify({ location: 'Nowhere' })
+      document.getElementById('status-service').value = 'weather-api'
+      document.getElementById('status-request').value = requestId
+    }
+
     quoteForm.addEventListener('submit', async (e) => {
       e.preventDefault()
       const fd = new FormData(quoteForm)
@@ -253,10 +343,6 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       setStatus(quoteStatus, out.ok, 'HTTP ' + out.status)
       quoteResult.textContent = pretty(out.data)
     })
-
-    const executeForm = document.getElementById('execute-form')
-    const executeResult = document.getElementById('execute-result')
-    const executeStatus = document.getElementById('execute-status')
 
     executeForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -281,15 +367,9 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       setStatus(executeStatus, out.ok, 'HTTP ' + out.status)
       executeResult.textContent = pretty(out.data)
 
-      const statusRequest = document.getElementById('status-request')
-      const statusService = document.getElementById('status-service')
-      statusRequest.value = payload.requestId
-      statusService.value = payload.serviceId
+      document.getElementById('status-request').value = payload.requestId
+      document.getElementById('status-service').value = payload.serviceId
     })
-
-    const statusForm = document.getElementById('status-form')
-    const statusResult = document.getElementById('status-result')
-    const statusStatus = document.getElementById('status-status')
 
     statusForm.addEventListener('submit', async (e) => {
       e.preventDefault()
@@ -303,6 +383,13 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       setStatus(statusStatus, res.ok, 'HTTP ' + res.status)
       statusResult.textContent = pretty(data)
     })
+
+    document.getElementById('preset-happy').addEventListener('click', fillHappyPreset)
+    document.getElementById('preset-error').addEventListener('click', fillErrorPreset)
+    document.getElementById('run-quote').addEventListener('click', () => quoteForm.requestSubmit())
+    document.getElementById('run-status').addEventListener('click', () => statusForm.requestSubmit())
+
+    fillErrorPreset()
   </script>
 </body>
 </html>`

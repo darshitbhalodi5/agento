@@ -42,7 +42,7 @@
 - Add Request status lookup (`/v1/requests/:requestId`)
 - Keep `/v1/dashboard` as read-only telemetry panel
 
-## Step 12 (next)
+## Step 12 (done)
 - Frontend polish for hackathon demo
 - Add guided demo mode with prefilled inputs
 - Add submission screenshots and short walkthrough
