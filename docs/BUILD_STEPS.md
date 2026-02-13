@@ -10,11 +10,11 @@
 - Add health route
 - Add environment config module
 
-## Step 3 (next)
+## Step 3 (done)
 - Add Postgres connection + base schema migration
 - Add `services` and `api_requests` tables
 
-## Step 4
+## Step 4 (next)
 - Implement `POST /v1/payments/quote`
 
 ## Step 5
