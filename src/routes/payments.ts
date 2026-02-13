@@ -13,6 +13,7 @@ import {
 } from '../db/api-requests.js'
 import { executeDownstreamCall } from '../services/downstream-client.js'
 import { verifyPaymentTx } from '../services/payment-verification.js'
+import { evaluateServicePolicyForExecute } from '../services/policy-engine.js'
 
 const apiErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
@@ -26,6 +27,7 @@ const apiErrorCodeSchema = z.enum([
   'REPLAY_DETECTED',
   'DOWNSTREAM_ERROR',
   'VERIFICATION_NOT_IMPLEMENTED',
+  'POLICY_BLOCKED',
 ])
 
 type ApiErrorCode = z.infer<typeof apiErrorCodeSchema>
@@ -48,6 +50,7 @@ const quoteResponseSchema = z.object({
 const executeRequestSchema = z.object({
   serviceId: z.string().min(1),
   requestId: z.string().min(1).max(128),
+  consumerId: z.string().trim().min(1).max(128).optional(),
   paymentTxHash: z
     .string()
     .regex(/^0x[a-fA-F0-9]{64}$/, 'paymentTxHash must be a 32-byte hex transaction hash'),
@@ -176,7 +179,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       )
     }
 
-    const { serviceId, requestId, paymentTxHash, payload } = parsed.data
+    const { serviceId, requestId, consumerId, paymentTxHash, payload } = parsed.data
     const service = await getActiveServiceById(serviceId)
 
     if (!service) {
@@ -227,6 +230,36 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         requestId,
         { replayReason: createRequestResult.replayReason },
       )
+    }
+
+    const policyDecision = await evaluateServicePolicyForExecute({
+      serviceId,
+      consumerId,
+      servicePriceAtomic: service.priceAtomic,
+    })
+
+    if (!policyDecision.allowed) {
+      await markApiRequestVerificationFailed({
+        serviceId,
+        requestId,
+        errorCode: 'POLICY_BLOCKED',
+      })
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'POLICY_BLOCKED',
+        errorCode: policyDecision.policyCode,
+        metaJson: {
+          consumerId: consumerId ?? null,
+          ...policyDecision.details,
+        },
+      })
+
+      return sendError(reply, 403, 'POLICY_BLOCKED', policyDecision.message, requestId, {
+        policyCode: policyDecision.policyCode,
+        ...policyDecision.details,
+      })
     }
 
     const verification = await verifyPaymentTx({

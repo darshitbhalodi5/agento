@@ -203,6 +203,23 @@ Behavior:
   - `EXECUTION_FAILED`
   - `EXECUTION_SUCCEEDED`
 
+## Policy Engine Core (T-17.3)
+Persistence:
+- migration: `migrations/006_service_policies.sql`
+- table: `service_policies`
+
+Behavior:
+- executes policy evaluation before chain verification in `POST /v1/payments/execute`
+- blocks deterministically with `POLICY_BLOCKED` when:
+  - consumer is blocklisted
+  - consumer is not allowlisted (when allowlist exists)
+  - per-minute call limit is exceeded
+  - projected hourly/daily spend limit is exceeded
+- writes `POLICY_BLOCKED` row into `usage_ledger` with detailed policy code
+
+Request extension:
+- `consumerId` is now supported as an optional execute payload field for allow/block list checks.
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`
