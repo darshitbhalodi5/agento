@@ -27,6 +27,25 @@ const serviceSchema = z.object({
   tags: z.array(z.string().min(1)).default([]),
 })
 
+const servicesQuerySchema = z
+  .object({
+    tag: z.string().min(1).optional(),
+    capability: z.string().min(1).optional(),
+    active: z.enum(['true', 'false']).optional(),
+    price_min: z.string().regex(/^\d+$/).optional(),
+    price_max: z.string().regex(/^\d+$/).optional(),
+    sort: z.enum(['created_desc', 'price_asc', 'price_desc', 'name_asc', 'name_desc']).optional(),
+  })
+  .superRefine((data, ctx) => {
+    if (data.price_min && data.price_max && BigInt(data.price_min) > BigInt(data.price_max)) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: 'price_min cannot be greater than price_max',
+        path: ['price_min'],
+      })
+    }
+  })
+
 function fail(message: string, details?: unknown) {
   return {
     ok: false,
@@ -50,8 +69,20 @@ export const registryRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(200).send({ ok: true, agentId: parsed.data.id })
   })
 
-  app.get('/registry/services', async (_request, reply) => {
-    const services = await listRegistryServices()
+  app.get('/registry/services', async (request, reply) => {
+    const parsed = servicesQuerySchema.safeParse(request.query)
+    if (!parsed.success) {
+      return reply.status(400).send(fail('Invalid service query payload', parsed.error.flatten()))
+    }
+
+    const services = await listRegistryServices({
+      tag: parsed.data.tag,
+      capability: parsed.data.capability,
+      active: parsed.data.active ? parsed.data.active === 'true' : undefined,
+      priceMin: parsed.data.price_min,
+      priceMax: parsed.data.price_max,
+      sort: parsed.data.sort,
+    })
     return reply.status(200).send({ ok: true, services })
   })
 

@@ -249,6 +249,40 @@ test('POST /v1/registry/agents validates deprecated metadata type', async () => 
   }
 })
 
+test('GET /v1/registry/services validates active filter value', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/registry/services?active=yes',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/registry/services validates price range filter', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/registry/services?price_min=5000&price_max=1000',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 

@@ -25,6 +25,15 @@ export interface RegistryServiceRecord {
   tags: string[]
 }
 
+export interface RegistryServiceFilters {
+  tag?: string
+  capability?: string
+  active?: boolean
+  priceMin?: string
+  priceMax?: string
+  sort?: 'created_desc' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc'
+}
+
 export async function upsertAgent(input: {
   id: string
   name: string
@@ -209,7 +218,75 @@ export async function upsertRegistryService(input: {
   }
 }
 
-export async function listRegistryServices(): Promise<RegistryServiceRecord[]> {
+export async function listRegistryServices(filters: RegistryServiceFilters = {}): Promise<RegistryServiceRecord[]> {
+  const conditions: string[] = []
+  const params: unknown[] = []
+
+  if (filters.tag) {
+    params.push(filters.tag)
+    conditions.push(
+      `EXISTS (
+        SELECT 1
+        FROM service_tags stf
+        WHERE stf.service_id = s.id
+          AND stf.tag = $${params.length}
+      )`,
+    )
+  }
+
+  if (filters.capability) {
+    params.push(filters.capability)
+    const capabilityParamIdx = params.length
+    params.push(`capability:${filters.capability}`)
+    const prefixedParamIdx = params.length
+
+    conditions.push(
+      `EXISTS (
+        SELECT 1
+        FROM service_tags stc
+        WHERE stc.service_id = s.id
+          AND (stc.tag = $${capabilityParamIdx} OR stc.tag = $${prefixedParamIdx})
+      )`,
+    )
+  }
+
+  if (filters.active !== undefined) {
+    params.push(filters.active)
+    conditions.push(`s.active = $${params.length}`)
+  }
+
+  if (filters.priceMin) {
+    params.push(filters.priceMin)
+    conditions.push(`s.price_atomic >= $${params.length}::numeric`)
+  }
+
+  if (filters.priceMax) {
+    params.push(filters.priceMax)
+    conditions.push(`s.price_atomic <= $${params.length}::numeric`)
+  }
+
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
+
+  let orderClause = 'ORDER BY s.created_at DESC, s.id ASC'
+  switch (filters.sort) {
+    case 'price_asc':
+      orderClause = 'ORDER BY s.price_atomic ASC, s.id ASC'
+      break
+    case 'price_desc':
+      orderClause = 'ORDER BY s.price_atomic DESC, s.id ASC'
+      break
+    case 'name_asc':
+      orderClause = 'ORDER BY s.name ASC, s.id ASC'
+      break
+    case 'name_desc':
+      orderClause = 'ORDER BY s.name DESC, s.id ASC'
+      break
+    case 'created_desc':
+    default:
+      orderClause = 'ORDER BY s.created_at DESC, s.id ASC'
+      break
+  }
+
   const result = await pool.query<{
     id: string
     name: string
@@ -231,9 +308,10 @@ export async function listRegistryServices(): Promise<RegistryServiceRecord[]> {
       COALESCE(array_agg(st.tag ORDER BY st.tag) FILTER (WHERE st.tag IS NOT NULL), '{}') AS tags
     FROM services s
     LEFT JOIN service_tags st ON st.service_id = s.id
+    ${whereClause}
     GROUP BY s.id, s.name, s.provider_wallet, s.token_address, s.price_atomic, s.memo_prefix, s.active
-    ORDER BY s.created_at DESC
-  `)
+    ${orderClause}
+  `, params)
 
   return result.rows.map((row) => ({
     id: row.id,

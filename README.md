@@ -147,6 +147,18 @@ Backward compatibility:
 - existing agent payloads continue to work
 - all metadata fields are optional with safe defaults
 
+## Service Discovery Filters (T-18.2)
+`GET /v1/registry/services` now supports filterable discovery params:
+- `tag`
+- `capability` (matches `tag` or `capability:<value>` tag convention)
+- `active` (`true` or `false`)
+- `price_min`
+- `price_max`
+- `sort` (`created_desc`, `price_asc`, `price_desc`, `name_asc`, `name_desc`)
+
+Determinism:
+- all sort modes include stable tie-breakers (`id ASC`) for reproducible ordering.
+
 ## Reputation Module (Step 14)
 API route:
 - `GET /v1/reputation/services?limit=50`
