@@ -62,3 +62,14 @@ curl -s -X POST http://localhost:3000/v1/payments/execute \
 
 Memo rule used for verification in Step 6:
 `memo = keccak256(\"api:v1:{serviceId}:{requestId}\")`
+
+## Replay + Audit (Step 7)
+- Replay protection is enforced at DB level using unique constraints:
+  - `(service_id, request_id)`
+  - `(payment_tx_hash)`
+- Every execute attempt creates/updates an `api_requests` audit record.
+
+Audit lookup:
+```bash
+curl -s \"http://localhost:3000/v1/requests/req_001?serviceId=weather-api\" | jq
+```

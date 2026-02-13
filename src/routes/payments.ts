@@ -2,6 +2,12 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { getActiveServiceById } from '../db/services.js'
+import {
+  createPendingApiRequest,
+  getApiRequestAuditRecord,
+  markApiRequestVerificationFailed,
+  markApiRequestVerified,
+} from '../db/api-requests.js'
 import { verifyPaymentTx } from '../services/payment-verification.js'
 
 const apiErrorCodeSchema = z.enum([
@@ -64,6 +70,43 @@ function sendError(
 }
 
 export const paymentRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/requests/:requestId', async (request, reply) => {
+    const paramsSchema = z.object({
+      requestId: z.string().min(1),
+    })
+    const querySchema = z.object({
+      serviceId: z.string().min(1),
+    })
+
+    const parsedParams = paramsSchema.safeParse(request.params)
+    const parsedQuery = querySchema.safeParse(request.query)
+
+    if (!parsedParams.success || !parsedQuery.success) {
+      return sendError(reply, 400, 'VALIDATION_ERROR', 'Invalid request status query payload')
+    }
+
+    const record = await getApiRequestAuditRecord({
+      serviceId: parsedQuery.data.serviceId,
+      requestId: parsedParams.data.requestId,
+    })
+
+    if (!record) {
+      return sendError(
+        reply,
+        404,
+        'PAYMENT_NOT_FOUND',
+        'No audit record found for this serviceId/requestId',
+        parsedParams.data.requestId,
+      )
+    }
+
+    return reply.status(200).send({
+      ok: true,
+      requestId: parsedParams.data.requestId,
+      audit: record,
+    })
+  })
+
   app.post('/payments/quote', async (request, reply) => {
     const parsed = quoteRequestSchema.safeParse(request.body)
     if (!parsed.success) {
@@ -126,6 +169,23 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active', requestId)
     }
 
+    const createRequestResult = await createPendingApiRequest({
+      serviceId,
+      requestId,
+      paymentTxHash,
+    })
+
+    if (!createRequestResult.ok) {
+      return sendError(
+        reply,
+        409,
+        'REPLAY_DETECTED',
+        'Duplicate requestId or paymentTxHash detected',
+        requestId,
+        { replayReason: createRequestResult.replayReason },
+      )
+    }
+
     const verification = await verifyPaymentTx({
       paymentTxHash: paymentTxHash as `0x${string}`,
       requestId,
@@ -133,6 +193,12 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
     })
 
     if (!verification.ok) {
+      await markApiRequestVerificationFailed({
+        serviceId,
+        requestId,
+        errorCode: verification.code,
+      })
+
       return sendError(
         reply,
         verification.code === 'PAYMENT_NOT_FOUND' ? 404 : 402,
@@ -142,6 +208,14 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         verification.details,
       )
     }
+
+    await markApiRequestVerified({
+      serviceId,
+      requestId,
+      payerAddress: verification.details.payer,
+      amountAtomic: verification.details.amountAtomic,
+      memoRaw: verification.details.memo,
+    })
 
     return reply.status(202).send({
       ok: true,

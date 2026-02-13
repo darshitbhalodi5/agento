@@ -23,10 +23,10 @@
 ## Step 6 (done)
 - Add Tempo payment verification (receipt/event parsing)
 
-## Step 7 (next)
+## Step 7 (done)
 - Add replay protection and audit logging
 
-## Step 8
+## Step 8 (next)
 - Integrate downstream protected API call
 
 ## Step 9
