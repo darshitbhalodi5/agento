@@ -32,5 +32,5 @@
 ## Step 9 (done)
 - Add minimal read-only dashboard
 
-## Step 10 (next)
+## Step 10 (done)
 - Add tests + demo script + final polish

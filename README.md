@@ -21,6 +21,8 @@ See `docs/BUILD_STEPS.md`.
 - `npm run build` - compile to `dist/`
 - `npm run db:check` - verify Postgres connectivity
 - `npm run db:migrate` - apply SQL migrations
+- `npm test` - run route tests
+- `npm run demo` - run demo curl flow script
 
 ## Quote API Quick Test
 1. Insert one active service in Postgres:
@@ -94,3 +96,29 @@ It shows:
 - replay blocks
 - execution success/failure
 - recent request table with statuses and error codes
+
+## Step 10 Test Coverage
+Current automated tests cover:
+- `GET /v1/health` success path
+- downstream mock unauthorized path
+- downstream mock authorized path
+
+Run:
+```bash
+npm test
+```
+
+## Step 10 Demo Script
+Script:
+```bash
+scripts/demo_flow.sh
+```
+
+Run:
+```bash
+npm run demo
+```
+
+Notes:
+- set `PAYMENT_TX_HASH` to a real Tempo transfer hash for end-to-end execute success
+- set `REQUEST_ID` for unique runs

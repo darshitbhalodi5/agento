@@ -7,13 +7,14 @@
     "doc": "docs"
   },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1",
+    "test": "npm run build --silent && node --test tests/**/*.test.mjs",
     "dev": "tsx watch src/server.ts",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
     "db:migrate": "npm run build --silent && node dist/db/migrate.js",
-    "db:check": "npm run build --silent && node dist/db/check.js"
+    "db:check": "npm run build --silent && node dist/db/check.js",
+    "demo": "bash scripts/demo_flow.sh"
   },
   "repository": {
     "type": "git",
