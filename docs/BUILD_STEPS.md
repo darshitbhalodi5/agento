@@ -1,16 +1,16 @@
 # Agento Build Steps (Push After Each Step)
 
-## Step 1 (current)
+## Step 1 (done)
 - Initialize repository structure
 - Add README and build steps
 - Add .gitignore
 
-## Step 2
+## Step 2 (done)
 - Scaffold Fastify TypeScript app
 - Add health route
 - Add environment config module
 
-## Step 3
+## Step 3 (next)
 - Add Postgres connection + base schema migration
 - Add `services` and `api_requests` tables
 
