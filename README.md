@@ -45,13 +45,14 @@ curl -s -X POST http://localhost:3000/v1/payments/quote \
   -d '{"serviceId":"weather-api","endpoint":"/forecast/7d"}' | jq
 ```
 
-## Execute API Skeleton (Step 5)
+## Execute API Flow (Step 8)
 Current behavior:
 - validates payload and service status
 - verifies payment transaction receipt + `TransferWithMemo` log on Tempo
 - validates token, recipient wallet, amount, and memo binding
-- returns structured error model
-- returns verified-but-pending response until Step 8 downstream execution
+- calls protected downstream API when verification succeeds
+- writes execution success/failure into audit log
+- returns structured error model on any failure path
 
 Example:
 ```bash
@@ -73,3 +74,10 @@ Audit lookup:
 ```bash
 curl -s \"http://localhost:3000/v1/requests/req_001?serviceId=weather-api\" | jq
 ```
+
+## Downstream Mock (Protected)
+Environment variables:
+- `DOWNSTREAM_API_URL` (default: `http://localhost:3000/v1/internal/mock/execute`)
+- `INTERNAL_API_KEY` (default: `agento-dev-key`)
+
+The execute endpoint forwards verified requests to the protected mock downstream route using `x-internal-api-key`.

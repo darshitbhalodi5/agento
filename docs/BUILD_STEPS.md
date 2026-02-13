@@ -26,10 +26,10 @@
 ## Step 7 (done)
 - Add replay protection and audit logging
 
-## Step 8 (next)
+## Step 8 (done)
 - Integrate downstream protected API call
 
-## Step 9
+## Step 9 (next)
 - Add minimal read-only dashboard
 
 ## Step 10

@@ -9,6 +9,11 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default('postgres://postgres:postgres@localhost:5432/agento'),
   TEMPO_RPC_URL: z.string().url().default('https://rpc.moderato.tempo.xyz'),
   CHAIN_ID: z.coerce.number().int().default(42431),
+  DOWNSTREAM_API_URL: z
+    .string()
+    .url()
+    .default('http://localhost:3000/v1/internal/mock/execute'),
+  INTERNAL_API_KEY: z.string().min(1).default('agento-dev-key'),
 })
 
 export const env = envSchema.parse(process.env)

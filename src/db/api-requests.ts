@@ -100,6 +100,47 @@ export async function markApiRequestVerified(input: {
   )
 }
 
+export async function markApiRequestExecutionFailed(input: {
+  serviceId: string
+  requestId: string
+  errorCode: string
+}) {
+  const { serviceId, requestId, errorCode } = input
+
+  await pool.query(
+    `
+      UPDATE api_requests
+      SET execution_status = 'FAILED',
+          error_code = $3,
+          completed_at = NOW()
+      WHERE service_id = $1
+        AND request_id = $2
+    `,
+    [serviceId, requestId, errorCode],
+  )
+}
+
+export async function markApiRequestExecutionSucceeded(input: {
+  serviceId: string
+  requestId: string
+  responseHash: string
+}) {
+  const { serviceId, requestId, responseHash } = input
+
+  await pool.query(
+    `
+      UPDATE api_requests
+      SET execution_status = 'SUCCEEDED',
+          response_hash = $3,
+          error_code = NULL,
+          completed_at = NOW()
+      WHERE service_id = $1
+        AND request_id = $2
+    `,
+    [serviceId, requestId, responseHash],
+  )
+}
+
 export interface ApiRequestAuditRecord {
   serviceId: string
   requestId: string

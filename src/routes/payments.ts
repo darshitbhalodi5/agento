@@ -5,9 +5,12 @@ import { getActiveServiceById } from '../db/services.js'
 import {
   createPendingApiRequest,
   getApiRequestAuditRecord,
+  markApiRequestExecutionFailed,
+  markApiRequestExecutionSucceeded,
   markApiRequestVerificationFailed,
   markApiRequestVerified,
 } from '../db/api-requests.js'
+import { executeDownstreamCall } from '../services/downstream-client.js'
 import { verifyPaymentTx } from '../services/payment-verification.js'
 
 const apiErrorCodeSchema = z.enum([
@@ -158,7 +161,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       )
     }
 
-    const { serviceId, requestId, paymentTxHash } = parsed.data
+    const { serviceId, requestId, paymentTxHash, payload } = parsed.data
     const service = await getActiveServiceById(serviceId)
 
     if (!service) {
@@ -217,12 +220,40 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       memoRaw: verification.details.memo,
     })
 
-    return reply.status(202).send({
+    const downstream = await executeDownstreamCall({
+      serviceId,
+      requestId,
+      payload,
+    })
+
+    if (!downstream.ok) {
+      await markApiRequestExecutionFailed({
+        serviceId,
+        requestId,
+        errorCode: 'DOWNSTREAM_ERROR',
+      })
+
+      return sendError(
+        reply,
+        downstream.statusCode >= 400 ? downstream.statusCode : 502,
+        'DOWNSTREAM_ERROR',
+        downstream.errorMessage ?? 'Downstream execution failed',
+        requestId,
+      )
+    }
+
+    await markApiRequestExecutionSucceeded({
+      serviceId,
+      requestId,
+      responseHash: downstream.responseHash,
+    })
+
+    return reply.status(200).send({
       ok: true,
       requestId,
       txHash: paymentTxHash,
       verification: verification.details,
-      next: 'PAYMENT_VERIFIED_EXECUTION_PENDING_STEP_8',
+      result: downstream.result,
     })
   })
 }
