@@ -188,6 +188,21 @@ Payload example (`POST /v1/billing/models`):
 }
 ```
 
+## Usage Ledger (T-17.2)
+Persistence:
+- migration: `migrations/005_usage_ledger.sql`
+- table: `usage_ledger`
+
+Behavior:
+- writes one usage record for every major execute outcome:
+  - `VALIDATION_FAILED`
+  - `SERVICE_NOT_FOUND`
+  - `SERVICE_INACTIVE`
+  - `REPLAY_BLOCKED`
+  - `VERIFICATION_FAILED`
+  - `EXECUTION_FAILED`
+  - `EXECUTION_SUCCEEDED`
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

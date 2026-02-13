@@ -69,6 +69,6 @@
 
 ## Step 17 (in progress)
 - [x] T-17.1 Billing Model Schema + upsert/fetch APIs
-- [ ] T-17.2 Usage Ledger Persistence
+- [x] T-17.2 Usage Ledger Persistence
 - [ ] T-17.3 Policy Engine Core
 - [ ] T-17.4 Billing/Policy APIs

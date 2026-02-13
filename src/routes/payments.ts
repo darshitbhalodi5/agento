@@ -2,6 +2,7 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { getActiveServiceById } from '../db/services.js'
+import { insertUsageLedgerEntry } from '../db/usage-ledger.js'
 import {
   createPendingApiRequest,
   getApiRequestAuditRecord,
@@ -149,8 +150,22 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
   })
 
   app.post('/payments/execute', async (request, reply) => {
+    const logUsage = async (params: Parameters<typeof insertUsageLedgerEntry>[0]) => {
+      try {
+        await insertUsageLedgerEntry(params)
+      } catch (error) {
+        app.log.error({ error }, 'Failed to write usage ledger entry')
+      }
+    }
+
     const parsed = executeRequestSchema.safeParse(request.body)
     if (!parsed.success) {
+      await logUsage({
+        status: 'VALIDATION_FAILED',
+        errorCode: 'VALIDATION_ERROR',
+        metaJson: parsed.error.flatten(),
+      })
+
       return sendError(
         reply,
         400,
@@ -165,10 +180,26 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
     const service = await getActiveServiceById(serviceId)
 
     if (!service) {
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'SERVICE_NOT_FOUND',
+        errorCode: 'SERVICE_NOT_FOUND',
+      })
+
       return sendError(reply, 404, 'SERVICE_NOT_FOUND', 'Service does not exist', requestId)
     }
 
     if (!service.active) {
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'SERVICE_INACTIVE',
+        errorCode: 'SERVICE_INACTIVE',
+      })
+
       return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active', requestId)
     }
 
@@ -179,6 +210,15 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
     })
 
     if (!createRequestResult.ok) {
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'REPLAY_BLOCKED',
+        errorCode: 'REPLAY_DETECTED',
+        metaJson: { replayReason: createRequestResult.replayReason },
+      })
+
       return sendError(
         reply,
         409,
@@ -200,6 +240,14 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         serviceId,
         requestId,
         errorCode: verification.code,
+      })
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'VERIFICATION_FAILED',
+        errorCode: verification.code,
+        metaJson: verification.details,
       })
 
       return sendError(
@@ -232,6 +280,19 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
         requestId,
         errorCode: 'DOWNSTREAM_ERROR',
       })
+      await logUsage({
+        serviceId,
+        requestId,
+        paymentTxHash,
+        status: 'EXECUTION_FAILED',
+        errorCode: 'DOWNSTREAM_ERROR',
+        amountAtomic: verification.details.amountAtomic,
+        payerAddress: verification.details.payer,
+        metaJson: {
+          statusCode: downstream.statusCode,
+          message: downstream.errorMessage,
+        },
+      })
 
       return sendError(
         reply,
@@ -246,6 +307,17 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       serviceId,
       requestId,
       responseHash: downstream.responseHash,
+    })
+    await logUsage({
+      serviceId,
+      requestId,
+      paymentTxHash,
+      status: 'EXECUTION_SUCCEEDED',
+      amountAtomic: verification.details.amountAtomic,
+      payerAddress: verification.details.payer,
+      metaJson: {
+        responseHash: downstream.responseHash,
+      },
     })
 
     return reply.status(200).send({
