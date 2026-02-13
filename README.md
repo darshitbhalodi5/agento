@@ -146,6 +146,20 @@ Frontend:
   - median latency
   - last run timestamp
 
+## Multi-Agent Orchestration MVP (Step 15)
+UI route:
+- `GET /v1/orchestrator`
+
+API routes:
+- `GET /v1/orchestrations/template`
+- `POST /v1/orchestrations/run`
+
+Behavior:
+- supports 2-3+ step workflow payloads
+- each step can define multiple candidates (primary + fallback)
+- executes candidates in order until one succeeds
+- returns per-step attempt details (service, requestId, txHash, status)
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

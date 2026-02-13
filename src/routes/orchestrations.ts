@@ -1,0 +1,75 @@
+import type { FastifyPluginAsync } from 'fastify'
+import { z } from 'zod'
+import { runOrchestration } from '../services/orchestrator.js'
+
+const candidateSchema = z.object({
+  serviceId: z.string().min(1),
+  paymentTxHash: z.string().regex(/^0x[a-fA-F0-9]{64}$/),
+})
+
+const stepSchema = z.object({
+  stepId: z.string().min(1),
+  payload: z.record(z.string(), z.unknown()),
+  candidates: z.array(candidateSchema).min(1),
+})
+
+const runSchema = z.object({
+  runId: z.string().min(1).max(128),
+  workflowId: z.string().min(1).max(128),
+  steps: z.array(stepSchema).min(1).max(10),
+})
+
+export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/orchestrations/template', async (_request, reply) => {
+    return reply.status(200).send({
+      ok: true,
+      template: {
+        runId: `run_${Date.now()}`,
+        workflowId: 'wf_agent_commerce_demo',
+        steps: [
+          {
+            stepId: 'step_1_price_discovery',
+            payload: { location: 'NYC' },
+            candidates: [
+              {
+                serviceId: 'weather-api',
+                paymentTxHash: '0xREPLACE_PRIMARY_TX_HASH',
+              },
+              {
+                serviceId: 'weather-api-fallback',
+                paymentTxHash: '0xREPLACE_FALLBACK_TX_HASH',
+              },
+            ],
+          },
+          {
+            stepId: 'step_2_confirmation',
+            payload: { location: 'NYC', mode: 'confirm' },
+            candidates: [
+              {
+                serviceId: 'weather-api',
+                paymentTxHash: '0xREPLACE_SECOND_STEP_TX_HASH',
+              },
+            ],
+          },
+        ],
+      },
+    })
+  })
+
+  app.post('/orchestrations/run', async (request, reply) => {
+    const parsed = runSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Invalid orchestration run payload',
+          details: parsed.error.flatten(),
+        },
+      })
+    }
+
+    const result = await runOrchestration(parsed.data)
+
+    return reply.status(result.ok ? 200 : 207).send(result)
+  })
+}

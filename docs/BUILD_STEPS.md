@@ -57,12 +57,12 @@
 - Compute success rate, failure rate, and median latency per service
 - Show reputation cards in frontend
 
-## Step 15 (next)
+## Step 15 (done)
 - Add Multi-Agent Orchestration MVP
 - Define 2-3 step workflow execution
 - Step-level payment + fallback handling
 
-## Step 16
+## Step 16 (next)
 - Add Workflow Run History + Observability
 - Persist orchestration runs and per-step outcomes
 - Add run timeline view with tx hashes and error reasons

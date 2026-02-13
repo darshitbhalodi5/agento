@@ -9,6 +9,7 @@ const envSchema = z.object({
   DATABASE_URL: z.string().min(1).default('postgres://postgres:postgres@localhost:5432/agento'),
   TEMPO_RPC_URL: z.string().url().default('https://rpc.moderato.tempo.xyz'),
   CHAIN_ID: z.coerce.number().int().default(42431),
+  APP_BASE_URL: z.string().url().default('http://127.0.0.1:3000'),
   DOWNSTREAM_API_URL: z
     .string()
     .url()

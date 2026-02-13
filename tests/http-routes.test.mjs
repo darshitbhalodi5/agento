@@ -58,6 +58,24 @@ test('GET /v1/registry returns registry ui html shell', async () => {
   }
 })
 
+test('GET /v1/orchestrator returns orchestration ui html shell', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/orchestrator',
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.ok(String(res.headers['content-type']).includes('text/html'))
+    assert.match(res.body, /Multi-Agent Orchestrator/)
+    assert.match(res.body, /Run Workflow/)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 
