@@ -52,12 +52,12 @@
 - Agent/service capability CRUD
 - Service catalog list with price, status, and tags
 
-## Step 14 (next)
+## Step 14 (done)
 - Add Reputation module
 - Compute success rate, failure rate, and median latency per service
 - Show reputation cards in frontend
 
-## Step 15
+## Step 15 (next)
 - Add Multi-Agent Orchestration MVP
 - Define 2-3 step workflow execution
 - Step-level payment + fallback handling

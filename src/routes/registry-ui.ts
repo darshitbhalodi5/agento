@@ -90,6 +90,9 @@ export const registryUiRoutes: FastifyPluginAsync = async (app) => {
       font-size: 13px;
     }
     .tag { display: inline-block; padding: 2px 7px; border: 1px solid var(--line); border-radius: 999px; margin-right: 5px; margin-top: 5px; font-size: 11px; }
+    .kpi { margin-top: 6px; font-size: 12px; color: var(--muted); }
+    .ok { color: #16A34A; font-weight: 600; }
+    .bad { color: #DC2626; font-weight: 600; }
     @media (max-width: 900px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
@@ -139,6 +142,13 @@ export const registryUiRoutes: FastifyPluginAsync = async (app) => {
         <button id="refresh-services" type="button">Refresh Services</button>
         <div class="list" id="services-list"></div>
         <div class="meta">Catalog includes price/status/tags for discovery and matching.</div>
+      </article>
+
+      <article class="card">
+        <h2>Service Reputation</h2>
+        <button id="refresh-reputation" type="button">Refresh Reputation</button>
+        <div class="list" id="reputation-list"></div>
+        <div class="meta">Computed from execution outcomes and latency on recorded runs.</div>
       </article>
     </section>
   </div>
@@ -216,11 +226,29 @@ export const registryUiRoutes: FastifyPluginAsync = async (app) => {
       ).join('') || '<div class="item">No services found.</div>'
     }
 
+    async function refreshReputation() {
+      const out = await getJson('/v1/reputation/services')
+      const root = document.getElementById('reputation-list')
+      if (!out.ok || !Array.isArray(out.data.reputation)) {
+        root.innerHTML = '<div class="item">Failed to load reputation data</div>'
+        return
+      }
+      root.innerHTML = out.data.reputation.map((r) => {
+        const latency = r.medianLatencyMs === null ? 'n/a' : r.medianLatencyMs + ' ms'
+        const lastRun = r.lastRunAt ? new Date(r.lastRunAt).toLocaleString() : 'n/a'
+        return '<div class="item"><strong>' + r.serviceName + '</strong> (' + r.serviceId + ')<br/>' +
+          '<span class="kpi">Runs: ' + r.totalRuns + ' | <span class="ok">Success ' + r.successRatePct + '%</span> | <span class="bad">Fail ' + r.failureRatePct + '%</span></span><br/>' +
+          '<span class="kpi">Median latency: ' + latency + ' | Last run: ' + lastRun + '</span></div>'
+      }).join('') || '<div class="item">No reputation rows yet.</div>'
+    }
+
     document.getElementById('refresh-agents').addEventListener('click', refreshAgents)
     document.getElementById('refresh-services').addEventListener('click', refreshServices)
+    document.getElementById('refresh-reputation').addEventListener('click', refreshReputation)
 
     refreshAgents()
     refreshServices()
+    refreshReputation()
   </script>
 </body>
 </html>`

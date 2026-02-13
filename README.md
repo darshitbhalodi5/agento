@@ -134,6 +134,18 @@ Includes:
 - service registration with price/status/tags
 - live service catalog and agent directory
 
+## Reputation Module (Step 14)
+API route:
+- `GET /v1/reputation/services?limit=50`
+
+Frontend:
+- reputation cards rendered in `/v1/registry`
+- metrics per service:
+  - success rate
+  - failure rate
+  - median latency
+  - last run timestamp
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

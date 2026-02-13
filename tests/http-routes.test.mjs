@@ -52,6 +52,7 @@ test('GET /v1/registry returns registry ui html shell', async () => {
     assert.ok(String(res.headers['content-type']).includes('text/html'))
     assert.match(res.body, /Agento Registry/)
     assert.match(res.body, /Service Catalog/)
+    assert.match(res.body, /Service Reputation/)
   } finally {
     await app.close()
   }
