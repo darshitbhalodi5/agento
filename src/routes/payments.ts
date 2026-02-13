@@ -2,12 +2,14 @@ import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../config/env.js'
 import { getActiveServiceById } from '../db/services.js'
+import { verifyPaymentTx } from '../services/payment-verification.js'
 
 const apiErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
   'SERVICE_NOT_FOUND',
   'SERVICE_INACTIVE',
   'PAYMENT_NOT_FOUND',
+  'PAYMENT_TOKEN_MISMATCH',
   'PAYMENT_INSUFFICIENT',
   'PAYMENT_RECIPIENT_MISMATCH',
   'MEMO_MISMATCH',
@@ -92,7 +94,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       amount: service.priceAtomic,
       decimals: 6,
       recipient: service.providerWallet,
-      memoTemplate: `${service.memoPrefix}:v1:${service.id}:{requestId}:{nonce}`,
+      memoTemplate: `keccak256(${service.memoPrefix}:v1:${service.id}:{requestId})`,
       chainId: env.CHAIN_ID,
     }
 
@@ -113,7 +115,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       )
     }
 
-    const { serviceId, requestId } = parsed.data
+    const { serviceId, requestId, paymentTxHash } = parsed.data
     const service = await getActiveServiceById(serviceId)
 
     if (!service) {
@@ -124,12 +126,29 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
       return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active', requestId)
     }
 
-    return sendError(
-      reply,
-      501,
-      'VERIFICATION_NOT_IMPLEMENTED',
-      'Payment verification and execution flow will be added in Step 6 and Step 8',
+    const verification = await verifyPaymentTx({
+      paymentTxHash: paymentTxHash as `0x${string}`,
       requestId,
-    )
+      service,
+    })
+
+    if (!verification.ok) {
+      return sendError(
+        reply,
+        verification.code === 'PAYMENT_NOT_FOUND' ? 404 : 402,
+        verification.code,
+        verification.message,
+        requestId,
+        verification.details,
+      )
+    }
+
+    return reply.status(202).send({
+      ok: true,
+      requestId,
+      txHash: paymentTxHash,
+      verification: verification.details,
+      next: 'PAYMENT_VERIFIED_EXECUTION_PENDING_STEP_8',
+    })
   })
 }

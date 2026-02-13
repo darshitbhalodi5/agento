@@ -48,8 +48,10 @@ curl -s -X POST http://localhost:3000/v1/payments/quote \
 ## Execute API Skeleton (Step 5)
 Current behavior:
 - validates payload and service status
+- verifies payment transaction receipt + `TransferWithMemo` log on Tempo
+- validates token, recipient wallet, amount, and memo binding
 - returns structured error model
-- returns `VERIFICATION_NOT_IMPLEMENTED` until Step 6/8 are done
+- returns verified-but-pending response until Step 8 downstream execution
 
 Example:
 ```bash
@@ -57,3 +59,6 @@ curl -s -X POST http://localhost:3000/v1/payments/execute \
   -H 'content-type: application/json' \
   -d '{"serviceId":"weather-api","requestId":"req_001","paymentTxHash":"0x1111111111111111111111111111111111111111111111111111111111111111","payload":{"location":"NYC"}}' | jq
 ```
+
+Memo rule used for verification in Step 6:
+`memo = keccak256(\"api:v1:{serviceId}:{requestId}\")`

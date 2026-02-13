@@ -20,10 +20,10 @@
 ## Step 5 (done)
 - Implement `POST /v1/payments/execute` skeleton (validation + error model)
 
-## Step 6 (next)
+## Step 6 (done)
 - Add Tempo payment verification (receipt/event parsing)
 
-## Step 7
+## Step 7 (next)
 - Add replay protection and audit logging
 
 ## Step 8
