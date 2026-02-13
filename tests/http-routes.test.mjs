@@ -149,6 +149,60 @@ test('POST /v1/billing/models validates fixed model price requirements', async (
   }
 })
 
+test('GET /v1/billing/usage validates query payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/usage?limit=0',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/billing/summary validates datetime query payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/summary?from=not-a-date',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/policies validates payload fields', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/policies',
+      payload: {
+        serviceId: '',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 

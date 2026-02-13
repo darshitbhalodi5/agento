@@ -6,6 +6,8 @@ import { downstreamMockRoutes } from './routes/downstream-mock.js'
 import { frontendRoutes } from './routes/frontend.js'
 import { healthRoutes } from './routes/health.js'
 import { paymentRoutes } from './routes/payments.js'
+import { billingRoutes } from './routes/billing.js'
+import { policyRoutes } from './routes/policies.js'
 import { reputationRoutes } from './routes/reputation.js'
 import { orchestrationRoutes } from './routes/orchestrations.js'
 import { orchestratorUiRoutes } from './routes/orchestrator-ui.js'
@@ -25,6 +27,8 @@ export function buildApp() {
   app.register(registryUiRoutes, { prefix: '/v1' })
   app.register(dashboardRoutes, { prefix: '/v1' })
   app.register(billingModelRoutes, { prefix: '/v1' })
+  app.register(billingRoutes, { prefix: '/v1' })
+  app.register(policyRoutes, { prefix: '/v1' })
   app.register(paymentRoutes, { prefix: '/v1' })
   app.register(orchestrationRoutes, { prefix: '/v1' })
   app.register(reputationRoutes, { prefix: '/v1' })

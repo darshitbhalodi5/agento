@@ -220,6 +220,32 @@ Behavior:
 Request extension:
 - `consumerId` is now supported as an optional execute payload field for allow/block list checks.
 
+## Billing and Policy APIs (T-17.4)
+Routes:
+- `GET /v1/billing/usage`
+- `GET /v1/billing/summary`
+- `GET /v1/policies`
+- `POST /v1/policies`
+
+Billing usage query params:
+- `serviceId` (optional)
+- `status` (optional)
+- `from` / `to` (optional ISO datetime)
+- `limit` (optional, default 50, max 200)
+
+Billing summary query params:
+- `serviceId` (optional)
+- `from` / `to` (optional ISO datetime)
+
+Policy payload (`POST /v1/policies`) fields:
+- `serviceId` (required)
+- `active` (optional, default true)
+- `maxCallsPerMinute` (optional)
+- `maxSpendPerHourAtomic` (optional)
+- `maxSpendPerDayAtomic` (optional)
+- `allowlistConsumerIds` (optional, default empty)
+- `blocklistConsumerIds` (optional, default empty)
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

@@ -71,4 +71,4 @@
 - [x] T-17.1 Billing Model Schema + upsert/fetch APIs
 - [x] T-17.2 Usage Ledger Persistence
 - [x] T-17.3 Policy Engine Core
-- [ ] T-17.4 Billing/Policy APIs
+- [x] T-17.4 Billing/Policy APIs
