@@ -77,4 +77,4 @@
 - [x] T-18.1 Agent Metadata Expansion
 - [x] T-18.2 Service Discovery Filters
 - [x] T-18.3 Ranking Score Engine
-- [ ] T-18.4 Marketplace UI Upgrade
+- [x] T-18.4 Marketplace UI Upgrade

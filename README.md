@@ -175,6 +175,13 @@ Marketplace ranking is now computed from:
 Optional sorting:
 - `sort=rank_desc`
 
+## Marketplace UI Upgrade (T-18.4)
+`GET /v1/registry` now includes:
+- filter controls for tag, capability, active state, price range, and sort mode
+- sortable service catalog cards with rank + reputation context
+- interactive provider/service detail panels for pitch demos
+- richer agent registration form with metadata fields
+
 ## Reputation Module (Step 14)
 API route:
 - `GET /v1/reputation/services?limit=50`
