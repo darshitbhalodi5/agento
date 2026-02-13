@@ -1,0 +1,11 @@
+ALTER TABLE agents
+  ADD COLUMN IF NOT EXISTS owner_id TEXT,
+  ADD COLUMN IF NOT EXISTS description TEXT,
+  ADD COLUMN IF NOT EXISTS docs_url TEXT,
+  ADD COLUMN IF NOT EXISTS website_url TEXT,
+  ADD COLUMN IF NOT EXISTS version TEXT,
+  ADD COLUMN IF NOT EXISTS deprecated BOOLEAN NOT NULL DEFAULT FALSE;
+
+CREATE INDEX IF NOT EXISTS idx_agents_owner_id ON agents(owner_id);
+CREATE INDEX IF NOT EXISTS idx_agents_deprecated ON agents(deprecated);
+

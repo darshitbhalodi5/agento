@@ -203,6 +203,52 @@ test('POST /v1/policies validates payload fields', async () => {
   }
 })
 
+test('POST /v1/registry/agents validates metadata url fields', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/agents',
+      payload: {
+        id: 'agent-meta-test',
+        name: 'Agent Meta Test',
+        docsUrl: 'not-a-url',
+        capabilities: [],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/registry/agents validates deprecated metadata type', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/agents',
+      payload: {
+        id: 'agent-meta-test-2',
+        name: 'Agent Meta Test 2',
+        deprecated: 'yes',
+        capabilities: [],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 

@@ -134,6 +134,19 @@ Includes:
 - service registration with price/status/tags
 - live service catalog and agent directory
 
+## Agent Metadata Expansion (T-18.1)
+Agent registry now supports optional provider metadata fields:
+- `ownerId`
+- `description`
+- `docsUrl`
+- `websiteUrl`
+- `version`
+- `deprecated`
+
+Backward compatibility:
+- existing agent payloads continue to work
+- all metadata fields are optional with safe defaults
+
 ## Reputation Module (Step 14)
 API route:
 - `GET /v1/reputation/services?limit=50`

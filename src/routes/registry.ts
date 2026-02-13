@@ -6,6 +6,12 @@ const agentSchema = z.object({
   id: z.string().min(1),
   name: z.string().min(1),
   endpoint: z.string().url().optional(),
+  ownerId: z.string().min(1).max(128).optional(),
+  description: z.string().min(1).max(2000).optional(),
+  docsUrl: z.string().url().optional(),
+  websiteUrl: z.string().url().optional(),
+  version: z.string().min(1).max(64).optional(),
+  deprecated: z.boolean().default(false),
   active: z.boolean().default(true),
   capabilities: z.array(z.string().min(1)).default([]),
 })

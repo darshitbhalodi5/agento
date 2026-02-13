@@ -72,3 +72,9 @@
 - [x] T-17.2 Usage Ledger Persistence
 - [x] T-17.3 Policy Engine Core
 - [x] T-17.4 Billing/Policy APIs
+
+## Step 18 (in progress)
+- [x] T-18.1 Agent Metadata Expansion
+- [ ] T-18.2 Service Discovery Filters
+- [ ] T-18.3 Ranking Score Engine
+- [ ] T-18.4 Marketplace UI Upgrade

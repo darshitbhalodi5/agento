@@ -4,6 +4,12 @@ export interface AgentRecord {
   id: string
   name: string
   endpoint: string | null
+  ownerId: string | null
+  description: string | null
+  docsUrl: string | null
+  websiteUrl: string | null
+  version: string | null
+  deprecated: boolean
   active: boolean
   capabilities: string[]
 }
@@ -23,10 +29,17 @@ export async function upsertAgent(input: {
   id: string
   name: string
   endpoint?: string
+  ownerId?: string
+  description?: string
+  docsUrl?: string
+  websiteUrl?: string
+  version?: string
+  deprecated?: boolean
   active: boolean
   capabilities: string[]
 }) {
-  const { id, name, endpoint, active, capabilities } = input
+  const { id, name, endpoint, ownerId, description, docsUrl, websiteUrl, version, deprecated, active, capabilities } =
+    input
   const client = await pool.connect()
 
   try {
@@ -34,15 +47,43 @@ export async function upsertAgent(input: {
 
     await client.query(
       `
-        INSERT INTO agents (id, name, endpoint, active)
-        VALUES ($1, $2, $3, $4)
+        INSERT INTO agents (
+          id,
+          name,
+          endpoint,
+          owner_id,
+          description,
+          docs_url,
+          website_url,
+          version,
+          deprecated,
+          active
+        )
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)
         ON CONFLICT (id)
         DO UPDATE SET
           name = EXCLUDED.name,
           endpoint = EXCLUDED.endpoint,
+          owner_id = EXCLUDED.owner_id,
+          description = EXCLUDED.description,
+          docs_url = EXCLUDED.docs_url,
+          website_url = EXCLUDED.website_url,
+          version = EXCLUDED.version,
+          deprecated = EXCLUDED.deprecated,
           active = EXCLUDED.active
       `,
-      [id, name, endpoint ?? null, active],
+      [
+        id,
+        name,
+        endpoint ?? null,
+        ownerId ?? null,
+        description ?? null,
+        docsUrl ?? null,
+        websiteUrl ?? null,
+        version ?? null,
+        deprecated ?? false,
+        active,
+      ],
     )
 
     await client.query('DELETE FROM agent_capabilities WHERE agent_id = $1', [id])
@@ -72,6 +113,12 @@ export async function listAgents(): Promise<AgentRecord[]> {
     id: string
     name: string
     endpoint: string | null
+    owner_id: string | null
+    description: string | null
+    docs_url: string | null
+    website_url: string | null
+    version: string | null
+    deprecated: boolean
     active: boolean
     capabilities: string[]
   }>(`
@@ -79,11 +126,17 @@ export async function listAgents(): Promise<AgentRecord[]> {
       a.id,
       a.name,
       a.endpoint,
+      a.owner_id,
+      a.description,
+      a.docs_url,
+      a.website_url,
+      a.version,
+      a.deprecated,
       a.active,
       COALESCE(array_agg(ac.capability ORDER BY ac.capability) FILTER (WHERE ac.capability IS NOT NULL), '{}') AS capabilities
     FROM agents a
     LEFT JOIN agent_capabilities ac ON ac.agent_id = a.id
-    GROUP BY a.id, a.name, a.endpoint, a.active
+    GROUP BY a.id, a.name, a.endpoint, a.owner_id, a.description, a.docs_url, a.website_url, a.version, a.deprecated, a.active
     ORDER BY a.created_at DESC
   `)
 
@@ -91,6 +144,12 @@ export async function listAgents(): Promise<AgentRecord[]> {
     id: row.id,
     name: row.name,
     endpoint: row.endpoint,
+    ownerId: row.owner_id,
+    description: row.description,
+    docsUrl: row.docs_url,
+    websiteUrl: row.website_url,
+    version: row.version,
+    deprecated: row.deprecated,
     active: row.active,
     capabilities: row.capabilities,
   }))
