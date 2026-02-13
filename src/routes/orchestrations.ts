@@ -1,5 +1,10 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import {
+  getOrchestrationTimeline,
+  listOrchestrationRuns,
+  persistOrchestrationRun,
+} from '../db/orchestration-runs.js'
 import { runOrchestration } from '../services/orchestrator.js'
 
 const candidateSchema = z.object({
@@ -20,6 +25,59 @@ const runSchema = z.object({
 })
 
 export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
+  app.get('/orchestrations/runs', async (request, reply) => {
+    const querySchema = z.object({
+      limit: z.coerce.number().int().positive().max(200).default(30),
+    })
+
+    const parsed = querySchema.safeParse(request.query)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Invalid run history query params',
+          details: parsed.error.flatten(),
+        },
+      })
+    }
+
+    const runs = await listOrchestrationRuns(parsed.data.limit)
+    return reply.status(200).send({ ok: true, runs })
+  })
+
+  app.get('/orchestrations/runs/:runId', async (request, reply) => {
+    const paramsSchema = z.object({
+      runId: z.string().min(1),
+    })
+
+    const parsed = paramsSchema.safeParse(request.params)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Invalid run id params',
+          details: parsed.error.flatten(),
+        },
+      })
+    }
+
+    const timeline = await getOrchestrationTimeline(parsed.data.runId)
+    if (timeline.length === 0) {
+      return reply.status(404).send({
+        ok: false,
+        error: {
+          message: 'Run not found or no timeline data available',
+        },
+      })
+    }
+
+    return reply.status(200).send({
+      ok: true,
+      runId: parsed.data.runId,
+      timeline,
+    })
+  })
+
   app.get('/orchestrations/template', async (_request, reply) => {
     return reply.status(200).send({
       ok: true,
@@ -69,6 +127,10 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
     }
 
     const result = await runOrchestration(parsed.data)
+    await persistOrchestrationRun({
+      input: parsed.data,
+      result,
+    })
 
     return reply.status(result.ok ? 200 : 207).send(result)
   })

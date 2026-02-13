@@ -62,7 +62,7 @@
 - Define 2-3 step workflow execution
 - Step-level payment + fallback handling
 
-## Step 16 (next)
+## Step 16 (done)
 - Add Workflow Run History + Observability
 - Persist orchestration runs and per-step outcomes
 - Add run timeline view with tx hashes and error reasons

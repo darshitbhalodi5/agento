@@ -160,6 +160,17 @@ Behavior:
 - executes candidates in order until one succeeds
 - returns per-step attempt details (service, requestId, txHash, status)
 
+## Workflow History + Observability (Step 16)
+API routes:
+- `GET /v1/orchestrations/runs?limit=20`
+- `GET /v1/orchestrations/runs/:runId`
+
+Includes:
+- persistent orchestration run history
+- per-step outcome persistence
+- attempt timeline with tx hash, status code, and error code
+- run history + timeline panels on `/v1/orchestrator`
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

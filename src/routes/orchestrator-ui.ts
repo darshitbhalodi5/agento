@@ -42,6 +42,7 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
       background: #fff;
       padding: 12px;
     }
+    h2 { margin: 0 0 8px; color: var(--navy); }
     textarea {
       width: 100%;
       min-height: 260px;
@@ -78,6 +79,21 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     }
     .ok { color: var(--ok); font-weight: 600; }
     .bad { color: var(--bad); font-weight: 600; }
+    .grid {
+      margin-top: 12px;
+      display: grid;
+      gap: 12px;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+    }
+    .list { display: grid; gap: 8px; }
+    .item {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #fff;
+      font-size: 13px;
+    }
+    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
   </style>
 </head>
 <body>
@@ -92,6 +108,7 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     </section>
 
     <section class="card">
+      <h2>Workflow Runner</h2>
       <textarea id="payload"></textarea>
       <div class="actions">
         <button id="load-template" type="button">Load Template</button>
@@ -100,12 +117,33 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
       <div id="status" class="status">Template not loaded.</div>
       <pre id="result" class="result">No run yet.</pre>
     </section>
+
+    <section class="grid">
+      <article class="card">
+        <h2>Run History</h2>
+        <div class="actions">
+          <button id="refresh-runs" type="button">Refresh Runs</button>
+        </div>
+        <div id="runs-list" class="list"></div>
+      </article>
+
+      <article class="card">
+        <h2>Run Timeline</h2>
+        <div class="actions">
+          <button id="load-selected" type="button" class="alt">Load Selected Timeline</button>
+        </div>
+        <pre id="timeline" class="result">No timeline loaded.</pre>
+      </article>
+    </section>
   </div>
 
   <script>
     const payloadEl = document.getElementById('payload')
     const resultEl = document.getElementById('result')
     const statusEl = document.getElementById('status')
+    const runsListEl = document.getElementById('runs-list')
+    const timelineEl = document.getElementById('timeline')
+    let selectedRunId = ''
 
     function pretty(obj) {
       try { return JSON.stringify(obj, null, 2) } catch { return String(obj) }
@@ -140,14 +178,65 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
         body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
+
       statusEl.innerHTML = '<span class="' + (res.ok && data.ok ? 'ok' : 'bad') + '">HTTP ' + res.status + ' | workflow ' + (data.ok ? 'succeeded' : 'partial/failed') + '</span>'
       resultEl.textContent = pretty(data)
+
+      if (data && typeof data.runId === 'string') {
+        selectedRunId = data.runId
+      }
+
+      await refreshRuns()
+    }
+
+    async function refreshRuns() {
+      const res = await fetch('/v1/orchestrations/runs?limit=20')
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok || !Array.isArray(data.runs)) {
+        runsListEl.innerHTML = '<div class="item">Failed to load run history.</div>'
+        return
+      }
+
+      if (!selectedRunId && data.runs[0]) {
+        selectedRunId = data.runs[0].runId
+      }
+
+      runsListEl.innerHTML = data.runs.map((r) => {
+        const checked = selectedRunId === r.runId ? 'checked' : ''
+        const cls = r.ok ? 'ok' : 'bad'
+        return '<label class="item">' +
+          '<input type="radio" name="run-select" value="' + r.runId + '" ' + checked + '/> ' +
+          '<strong>' + r.runId + '</strong> | workflow: ' + r.workflowId + '<br/>' +
+          '<span class="' + cls + '">' + (r.ok ? 'SUCCESS' : 'FAILED') + '</span>' +
+          ' | steps: ' + r.stepCount + ' | attempts: ' + r.attemptCount + '<br/>' +
+          'created: ' + new Date(r.createdAt).toLocaleString() +
+          '</label>'
+      }).join('') || '<div class="item">No runs yet.</div>'
+
+      runsListEl.querySelectorAll('input[name="run-select"]').forEach((el) => {
+        el.addEventListener('change', (e) => {
+          selectedRunId = e.target.value
+        })
+      })
+    }
+
+    async function loadSelectedTimeline() {
+      if (!selectedRunId) {
+        timelineEl.textContent = 'No run selected.'
+        return
+      }
+      const res = await fetch('/v1/orchestrations/runs/' + encodeURIComponent(selectedRunId))
+      const data = await res.json().catch(() => ({}))
+      timelineEl.textContent = pretty(data)
     }
 
     document.getElementById('load-template').addEventListener('click', loadTemplate)
     document.getElementById('run').addEventListener('click', runWorkflow)
+    document.getElementById('refresh-runs').addEventListener('click', refreshRuns)
+    document.getElementById('load-selected').addEventListener('click', loadSelectedTimeline)
 
     loadTemplate()
+    refreshRuns()
   </script>
 </body>
 </html>`
