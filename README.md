@@ -21,3 +21,26 @@ See `docs/BUILD_STEPS.md`.
 - `npm run build` - compile to `dist/`
 - `npm run db:check` - verify Postgres connectivity
 - `npm run db:migrate` - apply SQL migrations
+
+## Quote API Quick Test
+1. Insert one active service in Postgres:
+```sql
+INSERT INTO services (id, name, provider_wallet, token_address, price_atomic, memo_prefix, active)
+VALUES (
+  'weather-api',
+  'Weather API',
+  '0x031891A61200FedDd622EbACC10734BC90093B2A',
+  '0x20c0000000000000000000000000000000000001',
+  '1000',
+  'api',
+  true
+)
+ON CONFLICT (id) DO NOTHING;
+```
+
+2. Call quote endpoint:
+```bash
+curl -s -X POST http://localhost:3000/v1/payments/quote \
+  -H 'content-type: application/json' \
+  -d '{"serviceId":"weather-api","endpoint":"/forecast/7d"}' | jq
+```

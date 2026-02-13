@@ -1,6 +1,7 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
 import { healthRoutes } from './routes/health.js'
+import { paymentRoutes } from './routes/payments.js'
 
 export function buildApp() {
   const app = Fastify({
@@ -10,6 +11,7 @@ export function buildApp() {
   })
 
   app.register(healthRoutes, { prefix: '/v1' })
+  app.register(paymentRoutes, { prefix: '/v1' })
 
   return app
 }

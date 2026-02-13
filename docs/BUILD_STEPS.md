@@ -14,10 +14,10 @@
 - Add Postgres connection + base schema migration
 - Add `services` and `api_requests` tables
 
-## Step 4 (next)
+## Step 4 (done)
 - Implement `POST /v1/payments/quote`
 
-## Step 5
+## Step 5 (next)
 - Implement `POST /v1/payments/execute` skeleton (validation + error model)
 
 ## Step 6
