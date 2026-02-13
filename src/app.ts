@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
+import { dashboardRoutes } from './routes/dashboard.js'
 import { downstreamMockRoutes } from './routes/downstream-mock.js'
 import { healthRoutes } from './routes/health.js'
 import { paymentRoutes } from './routes/payments.js'
@@ -12,6 +13,7 @@ export function buildApp() {
   })
 
   app.register(healthRoutes, { prefix: '/v1' })
+  app.register(dashboardRoutes, { prefix: '/v1' })
   app.register(paymentRoutes, { prefix: '/v1' })
   app.register(downstreamMockRoutes, { prefix: '/v1' })
 

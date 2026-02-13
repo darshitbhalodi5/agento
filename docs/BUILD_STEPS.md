@@ -29,8 +29,8 @@
 ## Step 8 (done)
 - Integrate downstream protected API call
 
-## Step 9 (next)
+## Step 9 (done)
 - Add minimal read-only dashboard
 
-## Step 10
+## Step 10 (next)
 - Add tests + demo script + final polish

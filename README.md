@@ -81,3 +81,16 @@ Environment variables:
 - `INTERNAL_API_KEY` (default: `agento-dev-key`)
 
 The execute endpoint forwards verified requests to the protected mock downstream route using `x-internal-api-key`.
+
+## Dashboard (Step 9)
+Read-only dashboard route:
+```bash
+open http://localhost:3000/v1/dashboard
+```
+
+It shows:
+- total requests
+- verified payments
+- replay blocks
+- execution success/failure
+- recent request table with statuses and error codes

@@ -218,3 +218,85 @@ export async function getApiRequestAuditRecord(input: {
     completedAt: row.completed_at,
   }
 }
+
+export interface DashboardStats {
+  totalRequests: number
+  verifiedPayments: number
+  replayBlocks: number
+  executionSucceeded: number
+  executionFailed: number
+}
+
+export interface RecentRequestRow {
+  serviceId: string
+  requestId: string
+  paymentTxHash: string
+  verificationStatus: string
+  executionStatus: string
+  errorCode: string | null
+  createdAt: string
+}
+
+export async function getDashboardStats(): Promise<DashboardStats> {
+  const result = await pool.query<{
+    total_requests: string
+    verified_payments: string
+    replay_blocks: string
+    execution_succeeded: string
+    execution_failed: string
+  }>(`
+    SELECT
+      COUNT(*)::text AS total_requests,
+      COUNT(*) FILTER (WHERE verification_status = 'VERIFIED')::text AS verified_payments,
+      COUNT(*) FILTER (WHERE error_code = 'REPLAY_DETECTED')::text AS replay_blocks,
+      COUNT(*) FILTER (WHERE execution_status = 'SUCCEEDED')::text AS execution_succeeded,
+      COUNT(*) FILTER (WHERE execution_status = 'FAILED')::text AS execution_failed
+    FROM api_requests
+  `)
+
+  const row = result.rows[0]
+  return {
+    totalRequests: Number(row.total_requests),
+    verifiedPayments: Number(row.verified_payments),
+    replayBlocks: Number(row.replay_blocks),
+    executionSucceeded: Number(row.execution_succeeded),
+    executionFailed: Number(row.execution_failed),
+  }
+}
+
+export async function getRecentRequests(limit = 20): Promise<RecentRequestRow[]> {
+  const result = await pool.query<{
+    service_id: string
+    request_id: string
+    payment_tx_hash: string
+    verification_status: string
+    execution_status: string
+    error_code: string | null
+    created_at: string
+  }>(
+    `
+      SELECT
+        service_id,
+        request_id,
+        payment_tx_hash,
+        verification_status,
+        execution_status,
+        error_code,
+        created_at
+      FROM api_requests
+      ORDER BY created_at DESC
+      LIMIT $1
+    `,
+    [limit],
+  )
+
+  return result.rows.map((row) => ({
+    serviceId: row.service_id,
+    requestId: row.request_id,
+    paymentTxHash: row.payment_tx_hash,
+    verificationStatus: row.verification_status,
+    executionStatus: row.execution_status,
+    errorCode: row.error_code,
+    createdAt: row.created_at,
+  }))
+}
