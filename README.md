@@ -117,6 +117,23 @@ Includes:
 - Request status lookup (`GET /v1/requests/:requestId?serviceId=...`)
 - Quick links to telemetry dashboard and health endpoint
 
+## Agent Registry + Catalog (Step 13)
+UI route:
+```bash
+http://localhost:3000/v1/registry
+```
+
+Backend routes:
+- `GET /v1/registry/agents`
+- `POST /v1/registry/agents`
+- `GET /v1/registry/services`
+- `POST /v1/registry/services`
+
+Includes:
+- agent registration with capabilities
+- service registration with price/status/tags
+- live service catalog and agent directory
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

@@ -46,3 +46,23 @@
 - Frontend polish for hackathon demo
 - Add guided demo mode with prefilled inputs
 - Add submission screenshots and short walkthrough
+
+## Step 13 (done)
+- Add Agent Registry backend + UI
+- Agent/service capability CRUD
+- Service catalog list with price, status, and tags
+
+## Step 14 (next)
+- Add Reputation module
+- Compute success rate, failure rate, and median latency per service
+- Show reputation cards in frontend
+
+## Step 15
+- Add Multi-Agent Orchestration MVP
+- Define 2-3 step workflow execution
+- Step-level payment + fallback handling
+
+## Step 16
+- Add Workflow Run History + Observability
+- Persist orchestration runs and per-step outcomes
+- Add run timeline view with tx hashes and error reasons

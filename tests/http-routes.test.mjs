@@ -39,6 +39,24 @@ test('GET /v1/app returns frontend html shell', async () => {
   }
 })
 
+test('GET /v1/registry returns registry ui html shell', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/registry',
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.ok(String(res.headers['content-type']).includes('text/html'))
+    assert.match(res.body, /Agento Registry/)
+    assert.match(res.body, /Service Catalog/)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 
