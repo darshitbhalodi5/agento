@@ -34,7 +34,7 @@ const servicesQuerySchema = z
     active: z.enum(['true', 'false']).optional(),
     price_min: z.string().regex(/^\d+$/).optional(),
     price_max: z.string().regex(/^\d+$/).optional(),
-    sort: z.enum(['created_desc', 'price_asc', 'price_desc', 'name_asc', 'name_desc']).optional(),
+    sort: z.enum(['created_desc', 'price_asc', 'price_desc', 'name_asc', 'name_desc', 'rank_desc']).optional(),
   })
   .superRefine((data, ctx) => {
     if (data.price_min && data.price_max && BigInt(data.price_min) > BigInt(data.price_max)) {

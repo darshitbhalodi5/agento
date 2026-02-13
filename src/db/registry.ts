@@ -1,4 +1,5 @@
 import { pool } from './pool.js'
+import { computeMarketplaceRankings } from '../services/marketplace-ranking.js'
 
 export interface AgentRecord {
   id: string
@@ -23,6 +24,15 @@ export interface RegistryServiceRecord {
   memoPrefix: string
   active: boolean
   tags: string[]
+  totalRuns: number
+  successRuns: number
+  medianLatencyMs: number | null
+  rankScore: number
+  rankBreakdown: {
+    successScore: number
+    latencyScore: number
+    priceScore: number
+  }
 }
 
 export interface RegistryServiceFilters {
@@ -31,7 +41,7 @@ export interface RegistryServiceFilters {
   active?: boolean
   priceMin?: string
   priceMax?: string
-  sort?: 'created_desc' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc'
+  sort?: 'created_desc' | 'price_asc' | 'price_desc' | 'name_asc' | 'name_desc' | 'rank_desc'
 }
 
 export async function upsertAgent(input: {
@@ -281,6 +291,10 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     case 'name_desc':
       orderClause = 'ORDER BY s.name DESC, s.id ASC'
       break
+    case 'rank_desc':
+      // Ranking is computed in application code; fallback SQL order stays deterministic.
+      orderClause = 'ORDER BY s.created_at DESC, s.id ASC'
+      break
     case 'created_desc':
     default:
       orderClause = 'ORDER BY s.created_at DESC, s.id ASC'
@@ -296,6 +310,9 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     memo_prefix: string
     active: boolean
     tags: string[]
+    total_runs: string
+    success_runs: string
+    median_latency_ms: string | null
   }>(`
     SELECT
       s.id,
@@ -305,15 +322,44 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
       s.price_atomic,
       s.memo_prefix,
       s.active,
-      COALESCE(array_agg(st.tag ORDER BY st.tag) FILTER (WHERE st.tag IS NOT NULL), '{}') AS tags
+      COALESCE(array_agg(st.tag ORDER BY st.tag) FILTER (WHERE st.tag IS NOT NULL), '{}') AS tags,
+      COALESCE(ars.total_runs, '0') AS total_runs,
+      COALESCE(ars.success_runs, '0') AS success_runs,
+      ars.median_latency_ms
     FROM services s
     LEFT JOIN service_tags st ON st.service_id = s.id
+    LEFT JOIN LATERAL (
+      SELECT
+        COUNT(*)::text AS total_runs,
+        COUNT(*) FILTER (WHERE execution_status = 'SUCCEEDED')::text AS success_runs,
+        CASE
+          WHEN COUNT(*) FILTER (WHERE completed_at IS NOT NULL) = 0 THEN NULL
+          ELSE ROUND(
+            percentile_cont(0.5) WITHIN GROUP (
+              ORDER BY EXTRACT(EPOCH FROM (completed_at - created_at)) * 1000
+            )::numeric,
+            2
+          )::text
+        END AS median_latency_ms
+      FROM api_requests
+      WHERE service_id = s.id
+    ) ars ON TRUE
     ${whereClause}
-    GROUP BY s.id, s.name, s.provider_wallet, s.token_address, s.price_atomic, s.memo_prefix, s.active
+    GROUP BY
+      s.id,
+      s.name,
+      s.provider_wallet,
+      s.token_address,
+      s.price_atomic,
+      s.memo_prefix,
+      s.active,
+      ars.total_runs,
+      ars.success_runs,
+      ars.median_latency_ms
     ${orderClause}
   `, params)
 
-  return result.rows.map((row) => ({
+  const baseRows = result.rows.map((row) => ({
     id: row.id,
     name: row.name,
     providerWallet: row.provider_wallet,
@@ -322,5 +368,42 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     memoPrefix: row.memo_prefix,
     active: row.active,
     tags: row.tags,
+    totalRuns: Number(row.total_runs),
+    successRuns: Number(row.success_runs),
+    medianLatencyMs: row.median_latency_ms === null ? null : Number(row.median_latency_ms),
   }))
+
+  const rankings = computeMarketplaceRankings(
+    baseRows.map((row) => ({
+      id: row.id,
+      priceAtomic: row.priceAtomic,
+      totalRuns: row.totalRuns,
+      successRuns: row.successRuns,
+      medianLatencyMs: row.medianLatencyMs,
+    })),
+  )
+
+  const enrichedRows = baseRows.map((row) => {
+    const ranking = rankings.get(row.id)
+    return {
+      ...row,
+      rankScore: ranking?.rankScore ?? 0,
+      rankBreakdown: ranking?.breakdown ?? {
+        successScore: 0,
+        latencyScore: 0,
+        priceScore: 0,
+      },
+    }
+  })
+
+  if (filters.sort === 'rank_desc') {
+    enrichedRows.sort((a, b) => {
+      if (b.rankScore !== a.rankScore) {
+        return b.rankScore - a.rankScore
+      }
+      return a.id.localeCompare(b.id)
+    })
+  }
+
+  return enrichedRows
 }

@@ -159,6 +159,22 @@ Backward compatibility:
 Determinism:
 - all sort modes include stable tie-breakers (`id ASC`) for reproducible ordering.
 
+## Ranking Score Engine (T-18.3)
+Marketplace ranking is now computed from:
+- success rate (weight 50%)
+- median latency (weight 30%)
+- price efficiency (weight 20%)
+
+`GET /v1/registry/services` response now includes:
+- `rankScore`
+- `rankBreakdown.successScore`
+- `rankBreakdown.latencyScore`
+- `rankBreakdown.priceScore`
+- `totalRuns`, `successRuns`, `medianLatencyMs`
+
+Optional sorting:
+- `sort=rank_desc`
+
 ## Reputation Module (Step 14)
 API route:
 - `GET /v1/reputation/services?limit=50`
