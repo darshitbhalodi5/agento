@@ -34,3 +34,15 @@
 
 ## Step 10 (done)
 - Add tests + demo script + final polish
+
+## Step 11 (done)
+- Build lightweight frontend app for demo flow
+- Add Quote form (`/v1/payments/quote`)
+- Add Execute form (`/v1/payments/execute`)
+- Add Request status lookup (`/v1/requests/:requestId`)
+- Keep `/v1/dashboard` as read-only telemetry panel
+
+## Step 12 (next)
+- Frontend polish for hackathon demo
+- Add guided demo mode with prefilled inputs
+- Add submission screenshots and short walkthrough

@@ -21,6 +21,23 @@ test('GET /v1/health returns service status', async () => {
   }
 })
 
+test('GET /v1/app returns frontend html shell', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/app',
+    })
+
+    assert.equal(res.statusCode, 200)
+    assert.ok(String(res.headers['content-type']).includes('text/html'))
+    assert.match(res.body, /Agento Demo Console/)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 

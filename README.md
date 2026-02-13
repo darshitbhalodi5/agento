@@ -97,6 +97,26 @@ It shows:
 - execution success/failure
 - recent request table with statuses and error codes
 
+## Frontend Direction
+- lightweight demo frontend for quote/execute/status flow
+- `/v1/dashboard` remains operational telemetry UI
+
+Why this is included:
+- judges can follow the problem-solution flow faster
+- reduces dependence on raw curl commands during live demo
+
+## Frontend Demo App (Step 11)
+UI route:
+```bash
+http://localhost:3000/v1/app
+```
+
+Includes:
+- Quote form (`POST /v1/payments/quote`)
+- Execute form (`POST /v1/payments/execute`)
+- Request status lookup (`GET /v1/requests/:requestId?serviceId=...`)
+- Quick links to telemetry dashboard and health endpoint
+
 ## Step 10 Test Coverage
 Current automated tests cover:
 - `GET /v1/health` success path
