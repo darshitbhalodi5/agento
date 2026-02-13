@@ -108,6 +108,47 @@ test('GET /v1/orchestrations/runs/:runId returns timeline envelope', async () =>
   }
 })
 
+test('GET /v1/billing/models validates required serviceId query', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/models',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/billing/models validates fixed model price requirements', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/billing/models',
+      payload: {
+        serviceId: 'weather-api',
+        modelType: 'fixed',
+        freeQuota: 0,
+        tierJson: [],
+        active: true,
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/internal/mock/execute rejects request without internal api key', async () => {
   const app = buildApp()
 

@@ -171,6 +171,23 @@ Includes:
 - attempt timeline with tx hash, status code, and error code
 - run history + timeline panels on `/v1/orchestrator`
 
+## Billing Models (T-17.1)
+API routes:
+- `GET /v1/billing/models?serviceId=weather-api`
+- `POST /v1/billing/models`
+
+Payload example (`POST /v1/billing/models`):
+```json
+{
+  "serviceId": "weather-api",
+  "modelType": "fixed",
+  "fixedPriceAtomic": "1000",
+  "freeQuota": 0,
+  "tierJson": [],
+  "active": true
+}
+```
+
 ## Step 12 Polish
 Added:
 - guided demo mode presets (happy-path and error-path inputs) in `/v1/app`

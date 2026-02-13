@@ -66,3 +66,9 @@
 - Add Workflow Run History + Observability
 - Persist orchestration runs and per-step outcomes
 - Add run timeline view with tx hashes and error reasons
+
+## Step 17 (in progress)
+- [x] T-17.1 Billing Model Schema + upsert/fetch APIs
+- [ ] T-17.2 Usage Ledger Persistence
+- [ ] T-17.3 Policy Engine Core
+- [ ] T-17.4 Billing/Policy APIs

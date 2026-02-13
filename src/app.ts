@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
+import { billingModelRoutes } from './routes/billing-models.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { downstreamMockRoutes } from './routes/downstream-mock.js'
 import { frontendRoutes } from './routes/frontend.js'
@@ -23,6 +24,7 @@ export function buildApp() {
   app.register(orchestratorUiRoutes, { prefix: '/v1' })
   app.register(registryUiRoutes, { prefix: '/v1' })
   app.register(dashboardRoutes, { prefix: '/v1' })
+  app.register(billingModelRoutes, { prefix: '/v1' })
   app.register(paymentRoutes, { prefix: '/v1' })
   app.register(orchestrationRoutes, { prefix: '/v1' })
   app.register(reputationRoutes, { prefix: '/v1' })
