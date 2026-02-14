@@ -29,6 +29,7 @@ function cleanObject(input: Record<string, unknown>): Record<string, unknown> {
 export function ControlPlaneConsole() {
   const { session } = useSessionStore()
   const headers = useMemo(() => buildAuthHeaders(session), [session])
+  const isAdmin = session.userRole === 'admin'
 
   const [agentQuery, setAgentQuery] = useState({ agentId: '', active: '', limit: '50' })
   const [agentCreate, setAgentCreate] = useState({ agentId: 'agent_demo', apiKey: '' })
@@ -88,10 +89,16 @@ export function ControlPlaneConsole() {
   const [workflowOut, setWorkflowOut] = useState('No workflow action yet.')
 
   async function listAgentKeys() {
+    const limit = Number(agentQuery.limit || '50')
+    if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
+      setAgentOut(pretty({ ok: false, error: { message: 'limit must be between 1 and 200' } }))
+      return
+    }
+
     const params = new URLSearchParams()
     if (agentQuery.agentId.trim()) params.set('agentId', agentQuery.agentId.trim())
     if (agentQuery.active === 'true' || agentQuery.active === 'false') params.set('active', agentQuery.active)
-    params.set('limit', agentQuery.limit || '50')
+    params.set('limit', String(limit))
 
     const result = await apiGet(`/v1/agent-keys?${params.toString()}`, {
       baseUrl: session.apiBaseUrl,
@@ -149,11 +156,17 @@ export function ControlPlaneConsole() {
       return
     }
 
+    const freeQuota = Number(billingModelForm.freeQuota || '0')
+    if (!Number.isFinite(freeQuota) || freeQuota < 0) {
+      setBillingModelOut(pretty({ ok: false, error: { message: 'freeQuota must be a non-negative integer' } }))
+      return
+    }
+
     const payload = cleanObject({
       serviceId: billingModelForm.serviceId,
       modelType: billingModelForm.modelType,
       fixedPriceAtomic: billingModelForm.fixedPriceAtomic,
-      freeQuota: Number(billingModelForm.freeQuota || '0'),
+      freeQuota,
       tierJson,
       active: billingModelForm.active,
     })
@@ -200,12 +213,18 @@ export function ControlPlaneConsole() {
   }
 
   async function queryBillingUsage() {
+    const limit = Number(usageQuery.limit || '50')
+    if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
+      setUsageOut(pretty({ ok: false, error: { message: 'limit must be between 1 and 200' } }))
+      return
+    }
+
     const params = new URLSearchParams()
     if (usageQuery.serviceId.trim()) params.set('serviceId', usageQuery.serviceId.trim())
     if (usageQuery.status.trim()) params.set('status', usageQuery.status.trim())
     if (usageQuery.from.trim()) params.set('from', usageQuery.from.trim())
     if (usageQuery.to.trim()) params.set('to', usageQuery.to.trim())
-    params.set('limit', usageQuery.limit || '50')
+    params.set('limit', String(limit))
 
     const result = await apiGet(`/v1/billing/usage?${params.toString()}`, {
       baseUrl: session.apiBaseUrl,
@@ -215,8 +234,14 @@ export function ControlPlaneConsole() {
   }
 
   async function listWorkflows() {
+    const limit = Number(workflowListQuery.limit || '50')
+    if (!Number.isFinite(limit) || limit < 1 || limit > 200) {
+      setWorkflowOut(pretty({ ok: false, error: { message: 'limit must be between 1 and 200' } }))
+      return
+    }
+
     const params = new URLSearchParams()
-    params.set('limit', workflowListQuery.limit || '50')
+    params.set('limit', String(limit))
     if (workflowListQuery.active === 'true' || workflowListQuery.active === 'false') {
       params.set('active', workflowListQuery.active)
     }
@@ -299,6 +324,9 @@ export function ControlPlaneConsole() {
       <p className="subtitle">
         Use admin role in session controls for write operations. This console covers agent keys, billing, policies, and workflows.
       </p>
+      <p className="badge badge-idle">
+        Current role: {session.userRole} | Write actions {isAdmin ? 'enabled' : 'disabled (switch to admin)'}
+      </p>
 
       <div className="registry-grid">
         <article className="panel">
@@ -343,13 +371,13 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={listAgentKeys}>
               GET /v1/agent-keys
             </button>
-            <button type="button" className="btn" onClick={createAgentKey}>
+            <button type="button" className="btn" onClick={createAgentKey} disabled={!isAdmin}>
               POST /v1/agent-keys
             </button>
-            <button type="button" className="btn" onClick={revokeAgentKey}>
+            <button type="button" className="btn" onClick={revokeAgentKey} disabled={!isAdmin}>
               Revoke Key
             </button>
-            <button type="button" className="btn" onClick={rotateAgentKey}>
+            <button type="button" className="btn" onClick={rotateAgentKey} disabled={!isAdmin}>
               Rotate Key
             </button>
           </div>
@@ -408,7 +436,7 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getBillingModel}>
               GET /v1/billing/models
             </button>
-            <button type="button" className="btn" onClick={upsertBillingModel}>
+            <button type="button" className="btn" onClick={upsertBillingModel} disabled={!isAdmin}>
               POST /v1/billing/models
             </button>
           </div>
@@ -477,7 +505,7 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getPolicies}>
               GET /v1/policies
             </button>
-            <button type="button" className="btn" onClick={upsertPolicy}>
+            <button type="button" className="btn" onClick={upsertPolicy} disabled={!isAdmin}>
               POST /v1/policies
             </button>
           </div>
@@ -634,10 +662,10 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getWorkflowById}>
               GET /v1/workflows/:id
             </button>
-            <button type="button" className="btn" onClick={createWorkflow}>
+            <button type="button" className="btn" onClick={createWorkflow} disabled={!isAdmin}>
               POST /v1/workflows
             </button>
-            <button type="button" className="btn" onClick={updateWorkflow}>
+            <button type="button" className="btn" onClick={updateWorkflow} disabled={!isAdmin}>
               PUT /v1/workflows/:id
             </button>
           </div>

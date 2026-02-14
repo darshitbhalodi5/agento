@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { apiGet } from '../lib/api-client'
 import { buildAuthHeaders, useSessionStore } from '../lib/session-store'
 
@@ -16,7 +16,7 @@ export function HealthCheckCard() {
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [summary, setSummary] = useState('Press refresh to query backend health.')
 
-  async function refresh() {
+  const refresh = useCallback(async () => {
     setState('loading')
     setSummary('Checking backend health...')
 
@@ -33,11 +33,11 @@ export function HealthCheckCard() {
     const status = typeof result.data.status === 'string' ? result.data.status : 'unknown'
     setState('ok')
     setSummary(`Backend healthy (${status})`)
-  }
+  }, [session])
 
   useEffect(() => {
     void refresh()
-  }, [session.apiBaseUrl, session.agentApiKey, session.userRole])
+  }, [refresh])
 
   return (
     <section className="card">
