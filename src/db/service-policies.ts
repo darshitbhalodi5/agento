@@ -130,7 +130,28 @@ export async function getServicePolicyByServiceId(serviceId: string): Promise<Se
   return toServicePolicyRecord(result.rows[0])
 }
 
-export async function listServicePolicies(limit = 100): Promise<ServicePolicyRecord[]> {
+export async function listServicePolicies(params: {
+  limit?: number
+  ownerId?: string
+} = {}): Promise<ServicePolicyRecord[]> {
+  const limit = params.limit ?? 100
+  const values: unknown[] = []
+  let whereClause = ''
+
+  if (params.ownerId) {
+    values.push(params.ownerId)
+    whereClause = `
+      WHERE EXISTS (
+        SELECT 1
+        FROM services s
+        WHERE s.id = service_policies.service_id
+          AND s.owner_id = $${values.length}
+      )
+    `
+  }
+
+  values.push(limit)
+
   const result = await pool.query<{
     id: number
     service_id: string
@@ -152,10 +173,11 @@ export async function listServicePolicies(limit = 100): Promise<ServicePolicyRec
         allowlist_consumer_ids,
         blocklist_consumer_ids
       FROM service_policies
+      ${whereClause}
       ORDER BY service_id ASC
-      LIMIT $1
+      LIMIT $${values.length}
     `,
-    [limit],
+    values,
   )
 
   return result.rows.map(toServicePolicyRecord)

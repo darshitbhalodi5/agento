@@ -32,7 +32,31 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    const role = readRoleFromHeader(request)
+    const ownerId = readOwnerIdFromHeader(request)
+    if (role === 'provider' && !ownerId) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Missing x-owner-id header for provider access',
+        },
+      })
+    }
+
     if (parsed.data.serviceId) {
+      if (role === 'provider') {
+        const serviceOwnerId = await getServiceOwnerId(parsed.data.serviceId)
+        if (serviceOwnerId !== ownerId) {
+          return reply.status(403).send({
+            ok: false,
+            error: {
+              code: 'AUTHZ_FORBIDDEN',
+              message: 'Provider cannot read policy for service they do not own',
+            },
+          })
+        }
+      }
+
       const policy = await getServicePolicyByServiceId(parsed.data.serviceId)
       if (!policy) {
         return reply.status(404).send({
@@ -49,7 +73,10 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    const policies = await listServicePolicies(parsed.data.limit)
+    const policies = await listServicePolicies({
+      limit: parsed.data.limit,
+      ownerId: role === 'provider' ? ownerId ?? undefined : undefined,
+    })
     return reply.status(200).send({
       ok: true,
       policies,

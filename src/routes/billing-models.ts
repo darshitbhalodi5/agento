@@ -40,6 +40,30 @@ export const billingModelRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return reply.status(400).send({
+          ok: false,
+          error: {
+            message: 'Missing x-owner-id header for provider access',
+          },
+        })
+      }
+
+      const serviceOwnerId = await getServiceOwnerId(parsed.data.serviceId)
+      if (serviceOwnerId !== ownerId) {
+        return reply.status(403).send({
+          ok: false,
+          error: {
+            code: 'AUTHZ_FORBIDDEN',
+            message: 'Provider cannot read billing model for service they do not own',
+          },
+        })
+      }
+    }
+
     const record = await getBillingModelByServiceId(parsed.data.serviceId)
     if (!record) {
       return reply.status(404).send({

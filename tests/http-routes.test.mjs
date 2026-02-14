@@ -531,6 +531,26 @@ test('GET /v1/billing/models validates required serviceId query', async () => {
   }
 })
 
+test('GET /v1/billing/models requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/models?serviceId=weather-api',
+      headers: {
+        'x-user-role': 'provider',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/agent-keys rejects non-admin role', async () => {
   const app = buildApp()
 
@@ -735,6 +755,26 @@ test('GET /v1/billing/usage validates query payload', async () => {
   }
 })
 
+test('GET /v1/billing/usage requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/usage?limit=10',
+      headers: {
+        'x-user-role': 'provider',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/billing/summary validates datetime query payload', async () => {
   const app = buildApp()
 
@@ -742,6 +782,26 @@ test('GET /v1/billing/summary validates datetime query payload', async () => {
     const res = await app.inject({
       method: 'GET',
       url: '/v1/billing/summary?from=not-a-date',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/billing/summary requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/billing/summary',
+      headers: {
+        'x-user-role': 'provider',
+      },
     })
 
     assert.equal(res.statusCode, 400)
@@ -764,6 +824,26 @@ test('POST /v1/policies validates payload fields', async () => {
       },
       payload: {
         serviceId: '',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/policies requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/policies',
+      headers: {
+        'x-user-role': 'provider',
       },
     })
 

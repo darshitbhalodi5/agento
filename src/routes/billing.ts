@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { getBillingSummary, listBillingUsage } from '../db/billing.js'
+import { readOwnerIdFromHeader, readRoleFromHeader } from '../middleware/authz.js'
 
 const statusEnum = z.enum([
   'VALIDATION_FAILED',
@@ -40,7 +41,21 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    const rows = await listBillingUsage(parsed.data)
+    const role = readRoleFromHeader(request)
+    const ownerId = readOwnerIdFromHeader(request)
+    if (role === 'provider' && !ownerId) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Missing x-owner-id header for provider access',
+        },
+      })
+    }
+
+    const rows = await listBillingUsage({
+      ...parsed.data,
+      ownerId: role === 'provider' ? ownerId ?? undefined : undefined,
+    })
     return reply.status(200).send({
       ok: true,
       usage: rows,
@@ -60,7 +75,21 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    const summary = await getBillingSummary(parsed.data)
+    const role = readRoleFromHeader(request)
+    const ownerId = readOwnerIdFromHeader(request)
+    if (role === 'provider' && !ownerId) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Missing x-owner-id header for provider access',
+        },
+      })
+    }
+
+    const summary = await getBillingSummary({
+      ...parsed.data,
+      ownerId: role === 'provider' ? ownerId ?? undefined : undefined,
+    })
     return reply.status(200).send({
       ok: true,
       summary,
@@ -68,4 +97,3 @@ export const billingRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 }
-

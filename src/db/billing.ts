@@ -3,6 +3,7 @@ import type { UsageLedgerStatus } from './usage-ledger.js'
 
 export interface BillingUsageFilters {
   serviceId?: string
+  ownerId?: string
   status?: UsageLedgerStatus
   from?: string
   to?: string
@@ -24,6 +25,7 @@ export interface BillingUsageRow {
 
 export interface BillingSummaryFilters {
   serviceId?: string
+  ownerId?: string
   from?: string
   to?: string
 }
@@ -37,13 +39,25 @@ export interface BillingSummaryRow {
   totalSpendAtomic: string
 }
 
-function buildWhereClause(filters: { serviceId?: string; status?: string; from?: string; to?: string }) {
+function buildWhereClause(filters: { serviceId?: string; ownerId?: string; status?: string; from?: string; to?: string }) {
   const where: string[] = []
   const values: unknown[] = []
 
   if (filters.serviceId) {
     values.push(filters.serviceId)
     where.push(`service_id = $${values.length}`)
+  }
+
+  if (filters.ownerId) {
+    values.push(filters.ownerId)
+    where.push(
+      `EXISTS (
+        SELECT 1
+        FROM services s
+        WHERE s.id = usage_ledger.service_id
+          AND s.owner_id = $${values.length}
+      )`,
+    )
   }
 
   if (filters.status) {
@@ -153,4 +167,3 @@ export async function getBillingSummary(filters: BillingSummaryFilters): Promise
     totalSpendAtomic: row.total_spend_atomic,
   }))
 }
-
