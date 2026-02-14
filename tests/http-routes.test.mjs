@@ -645,6 +645,31 @@ test('POST /v1/billing/models rejects non-admin role', async () => {
   }
 })
 
+test('POST /v1/billing/models requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/billing/models',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        serviceId: 'weather-api',
+        modelType: 'fixed',
+        fixedPriceAtomic: '1000',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/billing/usage validates query payload', async () => {
   const app = buildApp()
 
@@ -710,7 +735,7 @@ test('POST /v1/policies rejects non-admin role', async () => {
       method: 'POST',
       url: '/v1/policies',
       headers: {
-        'x-user-role': 'provider',
+        'x-user-role': 'viewer',
       },
       payload: {
         serviceId: 'weather-api',
@@ -721,6 +746,58 @@ test('POST /v1/policies rejects non-admin role', async () => {
     const body = res.json()
     assert.equal(body.ok, false)
     assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/policies requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/policies',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        serviceId: 'weather-api',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/registry/services requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/services',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        id: 'service-provider-owner-required',
+        name: 'Owner Header Required Service',
+        providerWallet: '0x031891A61200FedDd622EbACC10734BC90093B2A',
+        tokenAddress: '0x20c0000000000000000000000000000000000001',
+        priceAtomic: '1000',
+        memoPrefix: 'api',
+        tags: [],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
   } finally {
     await app.close()
   }

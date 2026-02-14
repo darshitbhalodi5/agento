@@ -29,7 +29,7 @@ function cleanObject(input: Record<string, unknown>): Record<string, unknown> {
 export function ControlPlaneConsole() {
   const { session } = useSessionStore()
   const headers = useMemo(() => buildAuthHeaders(session), [session])
-  const isAdmin = session.userRole === 'admin'
+  const canWrite = session.userRole === 'admin' || session.userRole === 'provider'
 
   const [agentQuery, setAgentQuery] = useState({ agentId: '', active: '', limit: '50' })
   const [agentCreate, setAgentCreate] = useState({ agentId: 'agent_demo', apiKey: '' })
@@ -325,7 +325,7 @@ export function ControlPlaneConsole() {
         Use admin role in session controls for write operations. This console covers agent keys, billing, policies, and workflows.
       </p>
       <p className="badge badge-idle">
-        Current role: {session.userRole} | Write actions {isAdmin ? 'enabled' : 'disabled (switch to admin)'}
+        Current role: {session.userRole} | Write actions {canWrite ? 'enabled' : 'disabled (switch to admin/provider)'}
       </p>
 
       <div className="registry-grid">
@@ -371,13 +371,13 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={listAgentKeys}>
               GET /v1/agent-keys
             </button>
-            <button type="button" className="btn" onClick={createAgentKey} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={createAgentKey} disabled={!canWrite}>
               POST /v1/agent-keys
             </button>
-            <button type="button" className="btn" onClick={revokeAgentKey} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={revokeAgentKey} disabled={!canWrite}>
               Revoke Key
             </button>
-            <button type="button" className="btn" onClick={rotateAgentKey} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={rotateAgentKey} disabled={!canWrite}>
               Rotate Key
             </button>
           </div>
@@ -436,7 +436,7 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getBillingModel}>
               GET /v1/billing/models
             </button>
-            <button type="button" className="btn" onClick={upsertBillingModel} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={upsertBillingModel} disabled={!canWrite}>
               POST /v1/billing/models
             </button>
           </div>
@@ -505,7 +505,7 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getPolicies}>
               GET /v1/policies
             </button>
-            <button type="button" className="btn" onClick={upsertPolicy} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={upsertPolicy} disabled={!canWrite}>
               POST /v1/policies
             </button>
           </div>
@@ -662,10 +662,10 @@ export function ControlPlaneConsole() {
             <button type="button" className="btn" onClick={getWorkflowById}>
               GET /v1/workflows/:id
             </button>
-            <button type="button" className="btn" onClick={createWorkflow} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={createWorkflow} disabled={!canWrite}>
               POST /v1/workflows
             </button>
-            <button type="button" className="btn" onClick={updateWorkflow} disabled={!isAdmin}>
+            <button type="button" className="btn" onClick={updateWorkflow} disabled={!canWrite}>
               PUT /v1/workflows/:id
             </button>
           </div>

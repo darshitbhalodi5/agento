@@ -18,6 +18,7 @@ export interface AgentRecord {
 export interface RegistryServiceRecord {
   id: string
   name: string
+  ownerId: string | null
   providerWallet: string
   tokenAddress: string
   priceAtomic: string
@@ -195,6 +196,7 @@ export async function getAgentOwnerId(agentId: string): Promise<string | null | 
 export async function upsertRegistryService(input: {
   id: string
   name: string
+  ownerId?: string
   providerWallet: string
   tokenAddress: string
   priceAtomic: string
@@ -202,7 +204,7 @@ export async function upsertRegistryService(input: {
   active: boolean
   tags: string[]
 }) {
-  const { id, name, providerWallet, tokenAddress, priceAtomic, memoPrefix, active, tags } = input
+  const { id, name, ownerId, providerWallet, tokenAddress, priceAtomic, memoPrefix, active, tags } = input
   const client = await pool.connect()
 
   try {
@@ -210,18 +212,19 @@ export async function upsertRegistryService(input: {
 
     await client.query(
       `
-        INSERT INTO services (id, name, provider_wallet, token_address, price_atomic, memo_prefix, active)
-        VALUES ($1, $2, $3, $4, $5, $6, $7)
+        INSERT INTO services (id, name, owner_id, provider_wallet, token_address, price_atomic, memo_prefix, active)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
         ON CONFLICT (id)
         DO UPDATE SET
           name = EXCLUDED.name,
+          owner_id = COALESCE(EXCLUDED.owner_id, services.owner_id),
           provider_wallet = EXCLUDED.provider_wallet,
           token_address = EXCLUDED.token_address,
           price_atomic = EXCLUDED.price_atomic,
           memo_prefix = EXCLUDED.memo_prefix,
           active = EXCLUDED.active
       `,
-      [id, name, providerWallet, tokenAddress, priceAtomic, memoPrefix, active],
+      [id, name, ownerId ?? null, providerWallet, tokenAddress, priceAtomic, memoPrefix, active],
     )
 
     await client.query('DELETE FROM service_tags WHERE service_id = $1', [id])
@@ -327,6 +330,7 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     price_atomic: string
     memo_prefix: string
     active: boolean
+    owner_id: string | null
     tags: string[]
     total_runs: string
     success_runs: string
@@ -335,6 +339,7 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     SELECT
       s.id,
       s.name,
+      s.owner_id,
       s.provider_wallet,
       s.token_address,
       s.price_atomic,
@@ -366,6 +371,7 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
     GROUP BY
       s.id,
       s.name,
+      s.owner_id,
       s.provider_wallet,
       s.token_address,
       s.price_atomic,
@@ -380,6 +386,7 @@ export async function listRegistryServices(filters: RegistryServiceFilters = {})
   const baseRows = result.rows.map((row) => ({
     id: row.id,
     name: row.name,
+    ownerId: row.owner_id,
     providerWallet: row.provider_wallet,
     tokenAddress: row.token_address,
     priceAtomic: row.price_atomic,

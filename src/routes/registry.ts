@@ -1,5 +1,6 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
+import { getServiceOwnerId } from '../db/services.js'
 import { listAgents, listRegistryServices, upsertAgent, upsertRegistryService } from '../db/registry.js'
 import { readOwnerIdFromHeader, readRoleFromHeader, requireRoles } from '../middleware/authz.js'
 
@@ -114,6 +115,30 @@ export const registryRoutes: FastifyPluginAsync = async (app) => {
     const parsed = serviceSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send(fail('Invalid service payload', parsed.error.flatten()))
+    }
+
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return reply.status(400).send(fail('Missing x-owner-id header for provider access'))
+      }
+
+      const currentOwnerId = await getServiceOwnerId(parsed.data.id)
+      if (currentOwnerId !== undefined && currentOwnerId !== ownerId) {
+        return reply.status(403).send(
+          fail('Provider cannot modify services owned by a different ownerId', {
+            providedOwnerId: ownerId,
+            serviceOwnerId: currentOwnerId,
+          }),
+        )
+      }
+
+      await upsertRegistryService({
+        ...parsed.data,
+        ownerId,
+      })
+      return reply.status(200).send({ ok: true, serviceId: parsed.data.id })
     }
 
     await upsertRegistryService(parsed.data)

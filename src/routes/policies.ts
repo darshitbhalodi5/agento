@@ -1,7 +1,8 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { getServicePolicyByServiceId, listServicePolicies, upsertServicePolicy } from '../db/service-policies.js'
-import { requireRoles } from '../middleware/authz.js'
+import { getServiceOwnerId } from '../db/services.js'
+import { readOwnerIdFromHeader, readRoleFromHeader, requireRoles } from '../middleware/authz.js'
 
 const getQuerySchema = z.object({
   serviceId: z.string().min(1).optional(),
@@ -56,7 +57,7 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/policies', { preHandler: requireRoles('admin') }, async (request, reply) => {
+  app.post('/policies', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
     const parsed = upsertSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
@@ -66,6 +67,43 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
           details: parsed.error.flatten(),
         },
       })
+    }
+
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return reply.status(400).send({
+          ok: false,
+          error: {
+            message: 'Missing x-owner-id header for provider access',
+          },
+        })
+      }
+
+      const serviceOwnerId = await getServiceOwnerId(parsed.data.serviceId)
+      if (serviceOwnerId === undefined) {
+        return reply.status(404).send({
+          ok: false,
+          error: {
+            message: 'Service not found',
+          },
+        })
+      }
+
+      if (serviceOwnerId !== ownerId) {
+        return reply.status(403).send({
+          ok: false,
+          error: {
+            code: 'AUTHZ_FORBIDDEN',
+            message: 'Provider cannot update policy for service they do not own',
+            details: {
+              providedOwnerId: ownerId,
+              serviceOwnerId,
+            },
+          },
+        })
+      }
     }
 
     const record = await upsertServicePolicy({
