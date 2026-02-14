@@ -1,5 +1,6 @@
 import Fastify from 'fastify'
 import { env } from './config/env.js'
+import { agentApiKeyRoutes } from './routes/agent-api-keys.js'
 import { billingModelRoutes } from './routes/billing-models.js'
 import { dashboardRoutes } from './routes/dashboard.js'
 import { downstreamMockRoutes } from './routes/downstream-mock.js'
@@ -69,6 +70,7 @@ export function buildApp() {
   app.register(orchestratorUiRoutes, { prefix: '/v1' })
   app.register(registryUiRoutes, { prefix: '/v1' })
   app.register(dashboardRoutes, { prefix: '/v1' })
+  app.register(agentApiKeyRoutes, { prefix: '/v1' })
   app.register(billingModelRoutes, { prefix: '/v1' })
   app.register(billingRoutes, { prefix: '/v1' })
   app.register(policyRoutes, { prefix: '/v1' })

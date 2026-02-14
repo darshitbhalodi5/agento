@@ -451,6 +451,70 @@ test('GET /v1/billing/models validates required serviceId query', async () => {
   }
 })
 
+test('GET /v1/agent-keys rejects non-admin role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/agent-keys',
+      headers: {
+        'x-user-role': 'provider',
+      },
+    })
+
+    assert.equal(res.statusCode, 403)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/agent-keys validates payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/agent-keys',
+      headers: {
+        'x-user-role': 'admin',
+      },
+      payload: {
+        agentId: '',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/agent-keys/:keyId/revoke validates key id params', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/agent-keys/invalid/revoke',
+      headers: {
+        'x-user-role': 'admin',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/billing/models validates fixed model price requirements', async () => {
   const app = buildApp()
 

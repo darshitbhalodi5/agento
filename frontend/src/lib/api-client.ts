@@ -88,3 +88,7 @@ export function apiGet<T>(path: string, options: Omit<ApiRequestOptions, 'method
 export function apiPost<T>(path: string, body: unknown, options: Omit<ApiRequestOptions, 'method' | 'body'> = {}) {
   return apiRequest<T>(path, { ...options, method: 'POST', body })
 }
+
+export function apiPut<T>(path: string, body: unknown, options: Omit<ApiRequestOptions, 'method' | 'body'> = {}) {
+  return apiRequest<T>(path, { ...options, method: 'PUT', body })
+}

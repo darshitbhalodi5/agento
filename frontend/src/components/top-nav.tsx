@@ -6,6 +6,7 @@ const navItems = [
   { href: '/registry', label: 'Registry' },
   { href: '/orchestrations', label: 'Orchestrations' },
   { href: '/observability', label: 'Observability' },
+  { href: '/control-plane', label: 'Control Plane' },
 ]
 
 export function TopNav() {
