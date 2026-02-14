@@ -67,14 +67,18 @@
 - Persist orchestration runs and per-step outcomes
 - Add run timeline view with tx hashes and error reasons
 
-## Step 17 (in progress)
+## Step 17 (done)
 - [x] T-17.1 Billing Model Schema + upsert/fetch APIs
 - [x] T-17.2 Usage Ledger Persistence
 - [x] T-17.3 Policy Engine Core
 - [x] T-17.4 Billing/Policy APIs
 
-## Step 18 (in progress)
+## Step 18 (done)
 - [x] T-18.1 Agent Metadata Expansion
 - [x] T-18.2 Service Discovery Filters
 - [x] T-18.3 Ranking Score Engine
 - [x] T-18.4 Marketplace UI Upgrade
+
+## Step 19 (in progress)
+- [x] T-19.1 Workflow Template Persistence
+- [ ] T-19.2 Async Orchestration Runner

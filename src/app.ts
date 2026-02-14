@@ -13,6 +13,7 @@ import { orchestrationRoutes } from './routes/orchestrations.js'
 import { orchestratorUiRoutes } from './routes/orchestrator-ui.js'
 import { registryRoutes } from './routes/registry.js'
 import { registryUiRoutes } from './routes/registry-ui.js'
+import { workflowRoutes } from './routes/workflows.js'
 
 export function buildApp() {
   const app = Fastify({
@@ -31,6 +32,7 @@ export function buildApp() {
   app.register(policyRoutes, { prefix: '/v1' })
   app.register(paymentRoutes, { prefix: '/v1' })
   app.register(orchestrationRoutes, { prefix: '/v1' })
+  app.register(workflowRoutes, { prefix: '/v1' })
   app.register(reputationRoutes, { prefix: '/v1' })
   app.register(registryRoutes, { prefix: '/v1' })
   app.register(downstreamMockRoutes, { prefix: '/v1' })

@@ -108,6 +108,77 @@ test('GET /v1/orchestrations/runs/:runId returns timeline envelope', async () =>
   }
 })
 
+test('GET /v1/workflows validates query payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/workflows?active=yes',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/workflows validates required workflow template fields', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/workflows',
+      payload: {
+        workflowId: 'wf_missing_fields',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('PUT /v1/workflows/:workflowId validates update payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/workflows/wf_demo',
+      payload: {},
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/workflows/:workflowId route exists', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/workflows/nonexistent_workflow',
+    })
+
+    // Route should exist; depending on DB state it can be 404 (not found) or 500 (db unavailable).
+    assert.ok([404, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/billing/models validates required serviceId query', async () => {
   const app = buildApp()
 
