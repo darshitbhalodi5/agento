@@ -31,17 +31,36 @@ export async function persistOrchestrationRun(params: {
 
     await client.query(
       `
-        INSERT INTO orchestration_runs (run_id, workflow_id, ok, run_status, started_at, completed_at, error_message)
-        VALUES ($1, $2, $3, $4, COALESCE((SELECT started_at FROM orchestration_runs WHERE run_id = $1), NOW()), NOW(), NULL)
+        INSERT INTO orchestration_runs (
+          run_id,
+          workflow_id,
+          ok,
+          run_status,
+          started_at,
+          completed_at,
+          error_message,
+          run_output_json
+        )
+        VALUES (
+          $1,
+          $2,
+          $3,
+          $4,
+          COALESCE((SELECT started_at FROM orchestration_runs WHERE run_id = $1), NOW()),
+          NOW(),
+          NULL,
+          $6::jsonb
+        )
         ON CONFLICT (run_id)
         DO UPDATE SET
           workflow_id = EXCLUDED.workflow_id,
           ok = EXCLUDED.ok,
           run_status = EXCLUDED.run_status,
           completed_at = NOW(),
-          error_message = $5
+          error_message = $5,
+          run_output_json = $6::jsonb
       `,
-      [input.runId, input.workflowId, result.ok, finalStatus, errorMessage],
+      [input.runId, input.workflowId, result.ok, finalStatus, errorMessage, JSON.stringify(result.runOutput)],
     )
 
     await client.query('DELETE FROM orchestration_step_outcomes WHERE run_id = $1', [input.runId])
@@ -183,6 +202,7 @@ export interface OrchestrationRunSummary {
   attemptCount: number
   selectedProviders: string[]
   errorMessage: string | null
+  runOutput: unknown
 }
 
 export async function getOrchestrationRunSummary(runId: string): Promise<OrchestrationRunSummary | null> {
@@ -200,6 +220,7 @@ export async function getOrchestrationRunSummary(runId: string): Promise<Orchest
     attempt_count: string
     selected_providers: string[] | null
     error_message: string | null
+    run_output_json: unknown
   }>(
     `
       SELECT
@@ -218,7 +239,8 @@ export async function getOrchestrationRunSummary(runId: string): Promise<Orchest
         COUNT(DISTINCT so.step_id) FILTER (WHERE so.succeeded)::text AS successful_step_count,
         COUNT(sa.id)::text AS attempt_count,
         ARRAY_REMOVE(ARRAY_AGG(DISTINCT so.chosen_service_id), NULL) AS selected_providers,
-        r.error_message
+        r.error_message,
+        r.run_output_json
       FROM orchestration_runs r
       LEFT JOIN orchestration_step_outcomes so ON so.run_id = r.run_id
       LEFT JOIN orchestration_step_attempts sa ON sa.run_id = r.run_id
@@ -249,6 +271,7 @@ export async function getOrchestrationRunSummary(runId: string): Promise<Orchest
     attemptCount: Number(row.attempt_count),
     selectedProviders: row.selected_providers ?? [],
     errorMessage: row.error_message,
+    runOutput: row.run_output_json ?? null,
   }
 }
 

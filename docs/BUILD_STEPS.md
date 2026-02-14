@@ -87,6 +87,9 @@
 - [x] T-20.1 Retry/Backoff Policies
 - [x] T-20.2 Run Cancellation API
 
-## Step 21 (in progress)
+## Step 21 (done)
 - [x] T-21.1 Run Summary Endpoint
-- [ ] T-21.2 Step Output Aggregation
+- [x] T-21.2 Step Output Aggregation
+
+## Step 22 (next)
+- [ ] T-22.1 Observability Dashboard Filters

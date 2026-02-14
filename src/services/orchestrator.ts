@@ -41,12 +41,27 @@ export interface OrchestrationStepResult {
   attempts: OrchestrationAttempt[]
 }
 
+export interface OrchestrationRunOutputStep {
+  stepId: string
+  succeeded: boolean
+  chosenServiceId: string | null
+  attemptCount: number
+  output: unknown
+}
+
+export interface OrchestrationRunOutput {
+  steps: OrchestrationRunOutputStep[]
+  finalStepId: string | null
+  finalOutput: unknown
+}
+
 export interface OrchestrationRunResult {
   ok: boolean
   runId: string
   workflowId: string
   cancelled?: boolean
   steps: OrchestrationStepResult[]
+  runOutput: OrchestrationRunOutput
 }
 
 export interface OrchestrationExecutionOptions {
@@ -55,6 +70,33 @@ export interface OrchestrationExecutionOptions {
 
 function baseUrl() {
   return env.APP_BASE_URL
+}
+
+function getStepOutput(step: OrchestrationStepResult): unknown {
+  if (!step.succeeded) {
+    return null
+  }
+
+  const successAttempt = step.attempts.find((attempt) => attempt.ok)
+  return successAttempt?.response ?? null
+}
+
+export function buildRunOutput(steps: OrchestrationStepResult[]): OrchestrationRunOutput {
+  const outputSteps: OrchestrationRunOutputStep[] = steps.map((step) => ({
+    stepId: step.stepId,
+    succeeded: step.succeeded,
+    chosenServiceId: step.chosenServiceId,
+    attemptCount: step.attempts.length,
+    output: getStepOutput(step),
+  }))
+
+  const finalSuccessful = [...outputSteps].reverse().find((step) => step.succeeded) ?? null
+
+  return {
+    steps: outputSteps,
+    finalStepId: finalSuccessful?.stepId ?? null,
+    finalOutput: finalSuccessful?.output ?? null,
+  }
 }
 
 async function executeCandidate(input: {
@@ -130,6 +172,7 @@ export async function runOrchestration(
             runId: input.runId,
             workflowId: input.workflowId,
             steps,
+            runOutput: buildRunOutput(steps),
           }
         }
 
@@ -184,6 +227,7 @@ export async function runOrchestration(
         runId: input.runId,
         workflowId: input.workflowId,
         steps,
+        runOutput: buildRunOutput(steps),
       }
     }
   }
@@ -193,5 +237,6 @@ export async function runOrchestration(
     runId: input.runId,
     workflowId: input.workflowId,
     steps,
+    runOutput: buildRunOutput(steps),
   }
 }
