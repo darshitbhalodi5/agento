@@ -206,6 +206,11 @@ h2 {
   gap: 12px;
 }
 
+.orchestration-grid {
+  display: grid;
+  gap: 12px;
+}
+
 .registry-lists {
   margin-top: 12px;
   display: grid;
@@ -284,6 +289,12 @@ h3 {
   padding: 8px 10px;
   background: #ffffff;
   font-size: 13px;
+}
+
+.item-button {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
 }
 
 ul {

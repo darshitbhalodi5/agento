@@ -1,5 +1,5 @@
 import { AppShell } from '../../components/app-shell'
-import { SectionCard } from '../../components/section-card'
+import { OrchestrationsConsole } from '../../components/orchestrations/orchestrations-console'
 
 export default function OrchestrationsPage() {
   return (
@@ -8,15 +8,12 @@ export default function OrchestrationsPage() {
         <p className="eyebrow">Orchestrations</p>
         <h1>Run and Observe Workflow Executions</h1>
         <p className="subtitle">
-          This page will be implemented in FE-07 with run enqueue, history filters, summaries, and timeline inspection.
+          Full orchestration interaction is now available, including enqueue, run history filters, summary/timeline reads, and
+          cancellation.
         </p>
       </section>
-      <SectionCard title="Status">
-        <ul>
-          <li>Ticket: FE-07</li>
-          <li>State: planned</li>
-        </ul>
-      </SectionCard>
+
+      <OrchestrationsConsole />
     </AppShell>
   )
 }
