@@ -79,6 +79,10 @@
 - [x] T-18.3 Ranking Score Engine
 - [x] T-18.4 Marketplace UI Upgrade
 
-## Step 19 (in progress)
+## Step 19 (done)
 - [x] T-19.1 Workflow Template Persistence
-- [ ] T-19.2 Async Orchestration Runner
+- [x] T-19.2 Async Orchestration Runner
+
+## Step 20 (next)
+- [ ] T-20.1 Retry/Backoff Policies
+- [ ] T-20.2 Run Cancellation API

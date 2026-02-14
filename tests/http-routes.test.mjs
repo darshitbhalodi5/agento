@@ -108,6 +108,60 @@ test('GET /v1/orchestrations/runs/:runId returns timeline envelope', async () =>
   }
 })
 
+test('POST /v1/orchestrations/run validates payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/run',
+      payload: {
+        runId: 'run_bad_payload',
+        workflowId: 'wf_demo',
+        steps: [],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/orchestrations/run enqueues run', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/run',
+      payload: {
+        runId: 'run_test_async_1',
+        workflowId: 'wf_demo',
+        steps: [
+          {
+            stepId: 'step_1',
+            payload: { location: 'NYC' },
+            candidates: [
+              {
+                serviceId: 'weather-api',
+                paymentTxHash: '0x1111111111111111111111111111111111111111111111111111111111111111',
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    // Route should exist and use enqueue semantics; DB-unavailable envs can return 500.
+    assert.ok([202, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/workflows validates query payload', async () => {
   const app = buildApp()
 

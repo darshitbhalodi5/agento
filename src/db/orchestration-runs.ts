@@ -26,15 +26,17 @@ export async function persistOrchestrationRun(params: {
 
     await client.query(
       `
-        INSERT INTO orchestration_runs (run_id, workflow_id, ok, started_at, completed_at)
-        VALUES ($1, $2, $3, NOW(), NOW())
+        INSERT INTO orchestration_runs (run_id, workflow_id, ok, run_status, started_at, completed_at, error_message)
+        VALUES ($1, $2, $3, $4, COALESCE((SELECT started_at FROM orchestration_runs WHERE run_id = $1), NOW()), NOW(), NULL)
         ON CONFLICT (run_id)
         DO UPDATE SET
           workflow_id = EXCLUDED.workflow_id,
           ok = EXCLUDED.ok,
-          completed_at = NOW()
+          run_status = EXCLUDED.run_status,
+          completed_at = NOW(),
+          error_message = NULL
       `,
-      [input.runId, input.workflowId, result.ok],
+      [input.runId, input.workflowId, result.ok, result.ok ? 'completed' : 'failed'],
     )
 
     await client.query('DELETE FROM orchestration_step_outcomes WHERE run_id = $1', [input.runId])
@@ -103,8 +105,11 @@ export interface OrchestrationRunListItem {
   runId: string
   workflowId: string
   ok: boolean
+  runStatus: 'queued' | 'running' | 'completed' | 'failed'
   createdAt: string
-  completedAt: string
+  startedAt: string | null
+  completedAt: string | null
+  errorMessage: string | null
   stepCount: number
   attemptCount: number
 }
@@ -114,8 +119,11 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
     run_id: string
     workflow_id: string
     ok: boolean
+    run_status: 'queued' | 'running' | 'completed' | 'failed'
     created_at: string
-    completed_at: string
+    started_at: string | null
+    completed_at: string | null
+    error_message: string | null
     step_count: string
     attempt_count: string
   }>(
@@ -124,14 +132,18 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
         r.run_id,
         r.workflow_id,
         r.ok,
+        r.run_status,
         r.created_at,
+        r.started_at,
         r.completed_at,
+        r.error_message,
         COUNT(DISTINCT so.step_id)::text AS step_count,
         COUNT(sa.id)::text AS attempt_count
       FROM orchestration_runs r
       LEFT JOIN orchestration_step_outcomes so ON so.run_id = r.run_id
       LEFT JOIN orchestration_step_attempts sa ON sa.run_id = r.run_id
-      GROUP BY r.run_id, r.workflow_id, r.ok, r.created_at, r.completed_at
+      GROUP BY
+        r.run_id, r.workflow_id, r.ok, r.run_status, r.created_at, r.started_at, r.completed_at, r.error_message
       ORDER BY r.created_at DESC
       LIMIT $1
     `,
@@ -142,11 +154,43 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
     runId: row.run_id,
     workflowId: row.workflow_id,
     ok: row.ok,
+    runStatus: row.run_status,
     createdAt: row.created_at,
+    startedAt: row.started_at,
     completedAt: row.completed_at,
+    errorMessage: row.error_message,
     stepCount: Number(row.step_count),
     attemptCount: Number(row.attempt_count),
   }))
+}
+
+export async function markOrchestrationRunRunning(runId: string) {
+  await pool.query(
+    `
+      UPDATE orchestration_runs
+      SET
+        run_status = 'running',
+        started_at = COALESCE(started_at, NOW()),
+        error_message = NULL
+      WHERE run_id = $1
+    `,
+    [runId],
+  )
+}
+
+export async function markOrchestrationRunFailed(runId: string, errorMessage: string) {
+  await pool.query(
+    `
+      UPDATE orchestration_runs
+      SET
+        ok = FALSE,
+        run_status = 'failed',
+        completed_at = NOW(),
+        error_message = $2
+      WHERE run_id = $1
+    `,
+    [runId, errorMessage],
+  )
 }
 
 export interface OrchestrationTimelineRow {

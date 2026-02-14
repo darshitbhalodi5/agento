@@ -3,9 +3,8 @@ import { z } from 'zod'
 import {
   getOrchestrationTimeline,
   listOrchestrationRuns,
-  persistOrchestrationRun,
 } from '../db/orchestration-runs.js'
-import { runOrchestration } from '../services/orchestrator.js'
+import { enqueueOrchestrationRun } from '../services/orchestration-queue.js'
 
 const candidateSchema = z.object({
   serviceId: z.string().min(1),
@@ -126,12 +125,21 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    const result = await runOrchestration(parsed.data)
-    await persistOrchestrationRun({
-      input: parsed.data,
-      result,
-    })
+    const enqueued = await enqueueOrchestrationRun(parsed.data)
+    if (!enqueued) {
+      return reply.status(409).send({
+        ok: false,
+        error: {
+          message: 'Run already exists',
+        },
+      })
+    }
 
-    return reply.status(result.ok ? 200 : 207).send(result)
+    return reply.status(202).send({
+      ok: true,
+      runId: parsed.data.runId,
+      workflowId: parsed.data.workflowId,
+      runStatus: 'queued',
+    })
   })
 }
