@@ -1,0 +1,88 @@
+:root {
+  --bg-a: #f4f8ff;
+  --bg-b: #f4fff8;
+  --text: #10233f;
+  --muted: #4a5f7a;
+  --line: #d6e0ed;
+  --card: #ffffff;
+  --accent: #0092cc;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body {
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  min-height: 100vh;
+  color: var(--text);
+  font-family: "IBM Plex Sans", "Segoe UI", sans-serif;
+  background: linear-gradient(160deg, var(--bg-a) 0%, #f8fbff 50%, var(--bg-b) 100%);
+}
+
+.page {
+  max-width: 980px;
+  margin: 32px auto;
+  padding: 0 16px;
+  display: grid;
+  gap: 16px;
+}
+
+.hero {
+  border-radius: 16px;
+  background: linear-gradient(130deg, #0c1729 0%, #0d2848 45%, #0596d2 100%);
+  color: #ffffff;
+  padding: 24px;
+}
+
+.eyebrow {
+  margin: 0;
+  font-size: 12px;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  opacity: 0.85;
+}
+
+h1 {
+  margin: 8px 0 10px;
+  font-size: 34px;
+  line-height: 1.1;
+}
+
+h2 {
+  margin: 0 0 10px;
+  font-size: 20px;
+}
+
+.subtitle {
+  margin: 0;
+  font-size: 16px;
+  max-width: 64ch;
+}
+
+.card {
+  background: var(--card);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px;
+}
+
+ul {
+  margin: 0;
+  padding-left: 20px;
+  color: var(--muted);
+}
+
+li {
+  margin: 6px 0;
+}
+
+code {
+  color: var(--accent);
+  font-family: "IBM Plex Mono", monospace;
+}

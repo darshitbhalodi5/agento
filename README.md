@@ -15,14 +15,39 @@ Execute API requests only after verified on-chain payment proof.
 We ship in small slices and push after every slice.
 See `docs/BUILD_STEPS.md`.
 
+## Monorepo Apps
+- Backend API (current root project): Fastify + TypeScript
+- Frontend app (new): Next.js in `frontend/`
+
+The backend remains source-of-truth for business logic and API contracts.
+The frontend is for interaction and demo UX.
+
 ## Local Commands
 - `npm run dev` - run Fastify in watch mode
+- `npm run dev:backend` - run backend explicitly
+- `npm run dev:frontend` - run Next.js frontend (`frontend/`)
 - `npm run check` - TypeScript type-check
 - `npm run build` - compile to `dist/`
 - `npm run db:check` - verify Postgres connectivity
 - `npm run db:migrate` - apply SQL migrations
 - `npm test` - run route tests
 - `npm run demo` - run demo curl flow script
+
+Frontend-specific:
+- `npm run install:frontend`
+- `npm run build:frontend`
+- `npm run start:frontend`
+
+## Frontend Quick Start (Next.js)
+```bash
+cd /home/db/agento
+npm run install:frontend
+cp frontend/.env.example frontend/.env.local
+npm run dev:frontend
+```
+
+Open:
+- `http://localhost:3001`
 
 ## Quote API Quick Test
 1. Insert one active service in Postgres:

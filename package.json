@@ -9,6 +9,11 @@
   "scripts": {
     "test": "npm run build --silent && node --test tests/**/*.test.mjs",
     "dev": "tsx watch src/server.ts",
+    "dev:backend": "tsx watch src/server.ts",
+    "dev:frontend": "npm --prefix frontend run dev",
+    "build:frontend": "npm --prefix frontend run build",
+    "start:frontend": "npm --prefix frontend run start",
+    "install:frontend": "npm --prefix frontend install",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
