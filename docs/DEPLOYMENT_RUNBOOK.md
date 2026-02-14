@@ -9,6 +9,9 @@ This runbook defines the minimum production handoff flow for:
 - Rollback execution
 - Incident response checkpoints
 
+Related reliability targets are defined in:
+- `docs/SLO_TARGETS.md`
+
 ## Environments
 - `staging`: pre-release validation with production-like config
 - `production`: public/demo-facing environment

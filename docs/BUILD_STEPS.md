@@ -98,6 +98,6 @@
 - [x] T-23.1 Role-Based Access for Admin APIs
 - [x] T-23.2 Agent API Key Authentication
 
-## Step 24 (in progress)
+## Step 24 (done)
 - [x] T-24.1 Load/Soak Test Suite
-- [ ] T-24.2 Deployment Hardening Checklist
+- [x] T-24.2 Deployment Hardening Checklist
