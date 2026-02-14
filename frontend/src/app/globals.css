@@ -6,6 +6,13 @@
   --line: #d6e0ed;
   --card: #ffffff;
   --accent: #0092cc;
+  --nav-bg: #ffffffcc;
+  --shadow-soft: 0 12px 28px rgba(3, 18, 36, 0.09);
+  --radius-m: 12px;
+  --radius-l: 16px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
 }
 
 * {
@@ -30,14 +37,48 @@ body {
   margin: 32px auto;
   padding: 0 16px;
   display: grid;
-  gap: 16px;
+  gap: var(--space-4);
+}
+
+.top-nav {
+  position: sticky;
+  top: var(--space-4);
+  z-index: 10;
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  padding: 8px;
+  border: 1px solid var(--line);
+  border-radius: var(--radius-m);
+  background: var(--nav-bg);
+  backdrop-filter: blur(6px);
+  box-shadow: var(--shadow-soft);
+}
+
+.top-nav-link {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  background: #ffffff;
+  color: var(--text);
+  text-decoration: none;
+  font-size: 13px;
+  font-weight: 600;
+  padding: 7px 12px;
+}
+
+.top-nav-link:hover {
+  border-color: var(--accent);
+  color: var(--accent);
 }
 
 .hero {
-  border-radius: 16px;
+  border-radius: var(--radius-l);
   background: linear-gradient(130deg, #0c1729 0%, #0d2848 45%, #0596d2 100%);
   color: #ffffff;
-  padding: 24px;
+  padding: var(--space-6);
+  box-shadow: var(--shadow-soft);
 }
 
 .eyebrow {
@@ -68,8 +109,9 @@ h2 {
 .card {
   background: var(--card);
   border: 1px solid var(--line);
-  border-radius: 12px;
-  padding: 16px;
+  border-radius: var(--radius-m);
+  padding: var(--space-4);
+  box-shadow: var(--shadow-soft);
 }
 
 ul {
@@ -85,4 +127,14 @@ li {
 code {
   color: var(--accent);
   font-family: "IBM Plex Mono", monospace;
+}
+
+@media (max-width: 720px) {
+  .page {
+    margin: 20px auto;
+  }
+
+  .top-nav {
+    top: 8px;
+  }
 }
