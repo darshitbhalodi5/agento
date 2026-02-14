@@ -49,6 +49,10 @@ npm run dev:frontend
 Open:
 - `http://localhost:3001`
 
+Backend CORS compatibility for separate frontend origin:
+- Set `FRONTEND_ORIGINS` in backend `.env` (comma-separated origins).
+- Default is `http://localhost:3001`.
+
 ## Quote API Quick Test
 1. Insert one active service in Postgres:
 ```sql

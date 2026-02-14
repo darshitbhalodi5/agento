@@ -23,6 +23,7 @@ App URL:
 
 ## Environment
 - `NEXT_PUBLIC_API_BASE_URL` (default from `.env.example`: `http://localhost:3000`)
+- Ensure backend `.env` includes `FRONTEND_ORIGINS=http://localhost:3001` (or your frontend origin) for CORS.
 
 ## Current Status
 - FE-01 bootstrap completed.

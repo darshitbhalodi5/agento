@@ -10,6 +10,7 @@ const envSchema = z.object({
   TEMPO_RPC_URL: z.string().url().default('https://rpc.moderato.tempo.xyz'),
   CHAIN_ID: z.coerce.number().int().default(42431),
   APP_BASE_URL: z.string().url().default('http://127.0.0.1:3000'),
+  FRONTEND_ORIGINS: z.string().default('http://localhost:3001'),
   DOWNSTREAM_API_URL: z
     .string()
     .url()
