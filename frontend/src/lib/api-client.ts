@@ -5,12 +5,12 @@ function readBaseUrl(): string {
   return base && base.length > 0 ? base : 'http://localhost:3000'
 }
 
-function buildUrl(path: string): string {
+function buildUrl(path: string, baseUrl?: string): string {
   if (path.startsWith('http://') || path.startsWith('https://')) {
     return path
   }
   const normalizedPath = path.startsWith('/') ? path : `/${path}`
-  return `${readBaseUrl()}${normalizedPath}`
+  return `${baseUrl || readBaseUrl()}${normalizedPath}`
 }
 
 function normalizeError(payload: unknown, fallbackMessage: string): ApiErrorPayload {
@@ -35,7 +35,7 @@ function normalizeError(payload: unknown, fallbackMessage: string): ApiErrorPayl
 }
 
 export async function apiRequest<T>(path: string, options: ApiRequestOptions = {}): Promise<ApiResult<T>> {
-  const url = buildUrl(path)
+  const url = buildUrl(path, options.baseUrl)
   const headers: HeadersInit = {
     'content-type': 'application/json',
     ...(options.headers ?? {}),

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react'
 import { apiGet } from '../lib/api-client'
+import { buildAuthHeaders, useSessionStore } from '../lib/session-store'
 
 interface HealthResponse {
   ok?: boolean
@@ -11,6 +12,7 @@ interface HealthResponse {
 }
 
 export function HealthCheckCard() {
+  const { session } = useSessionStore()
   const [state, setState] = useState<'idle' | 'loading' | 'ok' | 'error'>('idle')
   const [summary, setSummary] = useState('Press refresh to query backend health.')
 
@@ -18,7 +20,10 @@ export function HealthCheckCard() {
     setState('loading')
     setSummary('Checking backend health...')
 
-    const result = await apiGet<HealthResponse>('/v1/health')
+    const result = await apiGet<HealthResponse>('/v1/health', {
+      baseUrl: session.apiBaseUrl,
+      headers: buildAuthHeaders(session),
+    })
     if (!result.ok) {
       setState('error')
       setSummary(result.error.message || 'Health check failed')
@@ -32,7 +37,7 @@ export function HealthCheckCard() {
 
   useEffect(() => {
     void refresh()
-  }, [])
+  }, [session.apiBaseUrl, session.agentApiKey, session.userRole])
 
   return (
     <section className="card">

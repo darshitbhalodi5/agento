@@ -14,6 +14,7 @@ export interface ApiRequestOptions {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
   body?: unknown
   headers?: Record<string, string>
+  baseUrl?: string
   signal?: AbortSignal
 }
 
