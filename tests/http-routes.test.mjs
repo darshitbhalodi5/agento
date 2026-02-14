@@ -92,6 +92,40 @@ test('GET /v1/orchestrations/runs returns run history envelope', async () => {
   }
 })
 
+test('GET /v1/orchestrations/runs validates runStatus filter', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/orchestrations/runs?runStatus=unknown',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/orchestrations/runs validates date filter', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/orchestrations/runs?dateFrom=not-a-date',
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/orchestrations/runs/:runId returns timeline envelope', async () => {
   const app = buildApp()
 

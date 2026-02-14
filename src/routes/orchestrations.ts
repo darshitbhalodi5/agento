@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import {
+  getOrchestrationRunObservabilityMetrics,
   getOrchestrationRunSummary,
   getOrchestrationTimeline,
   listOrchestrationRuns,
@@ -39,6 +40,11 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
   app.get('/orchestrations/runs', async (request, reply) => {
     const querySchema = z.object({
       limit: z.coerce.number().int().positive().max(200).default(30),
+      workflowId: z.string().min(1).max(128).optional(),
+      runStatus: z.enum(['queued', 'running', 'completed', 'failed', 'cancelled']).optional(),
+      provider: z.string().min(1).max(128).optional(),
+      dateFrom: z.string().datetime().optional(),
+      dateTo: z.string().datetime().optional(),
     })
 
     const parsed = querySchema.safeParse(request.query)
@@ -52,8 +58,23 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
-    const runs = await listOrchestrationRuns(parsed.data.limit)
-    return reply.status(200).send({ ok: true, runs })
+    const runs = await listOrchestrationRuns({
+      limit: parsed.data.limit,
+      workflowId: parsed.data.workflowId,
+      runStatus: parsed.data.runStatus,
+      provider: parsed.data.provider,
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+    })
+    const metrics = await getOrchestrationRunObservabilityMetrics({
+      workflowId: parsed.data.workflowId,
+      runStatus: parsed.data.runStatus,
+      provider: parsed.data.provider,
+      dateFrom: parsed.data.dateFrom,
+      dateTo: parsed.data.dateTo,
+    })
+
+    return reply.status(200).send({ ok: true, runs, metrics })
   })
 
   app.get('/orchestrations/runs/:runId', async (request, reply) => {

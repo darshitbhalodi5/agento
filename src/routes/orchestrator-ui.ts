@@ -85,6 +85,40 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
       gap: 12px;
       grid-template-columns: repeat(2, minmax(0, 1fr));
     }
+    .filters {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 10px;
+    }
+    .filters label {
+      font-size: 12px;
+      color: var(--muted);
+      display: grid;
+      gap: 4px;
+    }
+    .filters input, .filters select {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 7px 8px;
+      font-size: 13px;
+      background: #fff;
+      color: var(--text);
+    }
+    .metrics {
+      display: grid;
+      gap: 8px;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      margin-bottom: 10px;
+    }
+    .metric {
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 8px;
+      background: #f8fafc;
+    }
+    .metric .k { font-size: 11px; color: var(--muted); }
+    .metric .v { font-size: 20px; font-weight: 700; color: var(--navy); }
     .list { display: grid; gap: 8px; }
     .item {
       border: 1px solid var(--line);
@@ -93,7 +127,11 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
       background: #fff;
       font-size: 13px;
     }
-    @media (max-width: 920px) { .grid { grid-template-columns: 1fr; } }
+    @media (max-width: 920px) {
+      .grid { grid-template-columns: 1fr; }
+      .filters { grid-template-columns: 1fr; }
+      .metrics { grid-template-columns: 1fr; }
+    }
   </style>
 </head>
 <body>
@@ -121,8 +159,38 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     <section class="grid">
       <article class="card">
         <h2>Run History</h2>
+        <div class="filters">
+          <label>Workflow
+            <input id="filter-workflow" placeholder="wf_agent_commerce_demo" />
+          </label>
+          <label>Status
+            <select id="filter-status">
+              <option value="">Any</option>
+              <option value="queued">queued</option>
+              <option value="running">running</option>
+              <option value="completed">completed</option>
+              <option value="failed">failed</option>
+              <option value="cancelled">cancelled</option>
+            </select>
+          </label>
+          <label>Provider
+            <input id="filter-provider" placeholder="weather-api" />
+          </label>
+          <label>Date From (ISO)
+            <input id="filter-date-from" placeholder="2026-02-14T00:00:00.000Z" />
+          </label>
+          <label>Date To (ISO)
+            <input id="filter-date-to" placeholder="2026-02-14T23:59:59.999Z" />
+          </label>
+        </div>
+        <div class="metrics">
+          <div class="metric"><div class="k">Runs</div><div id="metric-runs" class="v">0</div></div>
+          <div class="metric"><div class="k">Avg Run Duration (ms)</div><div id="metric-duration" class="v">-</div></div>
+          <div class="metric"><div class="k">Avg Fallback Depth</div><div id="metric-fallback" class="v">-</div></div>
+        </div>
         <div class="actions">
           <button id="refresh-runs" type="button">Refresh Runs</button>
+          <button id="apply-filters" type="button" class="alt">Apply Filters</button>
         </div>
         <div id="runs-list" class="list"></div>
       </article>
@@ -143,6 +211,14 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     const statusEl = document.getElementById('status')
     const runsListEl = document.getElementById('runs-list')
     const timelineEl = document.getElementById('timeline')
+    const filterWorkflowEl = document.getElementById('filter-workflow')
+    const filterStatusEl = document.getElementById('filter-status')
+    const filterProviderEl = document.getElementById('filter-provider')
+    const filterDateFromEl = document.getElementById('filter-date-from')
+    const filterDateToEl = document.getElementById('filter-date-to')
+    const metricRunsEl = document.getElementById('metric-runs')
+    const metricDurationEl = document.getElementById('metric-duration')
+    const metricFallbackEl = document.getElementById('metric-fallback')
     let selectedRunId = ''
 
     function pretty(obj) {
@@ -190,12 +266,26 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     }
 
     async function refreshRuns() {
-      const res = await fetch('/v1/orchestrations/runs?limit=20')
+      const params = new URLSearchParams({ limit: '20' })
+      if (filterWorkflowEl.value.trim()) params.set('workflowId', filterWorkflowEl.value.trim())
+      if (filterStatusEl.value.trim()) params.set('runStatus', filterStatusEl.value.trim())
+      if (filterProviderEl.value.trim()) params.set('provider', filterProviderEl.value.trim())
+      if (filterDateFromEl.value.trim()) params.set('dateFrom', filterDateFromEl.value.trim())
+      if (filterDateToEl.value.trim()) params.set('dateTo', filterDateToEl.value.trim())
+
+      const res = await fetch('/v1/orchestrations/runs?' + params.toString())
       const data = await res.json().catch(() => ({}))
       if (!res.ok || !Array.isArray(data.runs)) {
         runsListEl.innerHTML = '<div class="item">Failed to load run history.</div>'
+        metricRunsEl.textContent = '0'
+        metricDurationEl.textContent = '-'
+        metricFallbackEl.textContent = '-'
         return
       }
+
+      metricRunsEl.textContent = String(data.metrics?.runCount ?? data.runs.length)
+      metricDurationEl.textContent = data.metrics?.avgRunDurationMs == null ? '-' : String(Math.round(data.metrics.avgRunDurationMs))
+      metricFallbackEl.textContent = data.metrics?.avgFallbackDepth == null ? '-' : String(Number(data.metrics.avgFallbackDepth).toFixed(2))
 
       if (!selectedRunId && data.runs[0]) {
         selectedRunId = data.runs[0].runId
@@ -207,7 +297,7 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
         return '<label class="item">' +
           '<input type="radio" name="run-select" value="' + r.runId + '" ' + checked + '/> ' +
           '<strong>' + r.runId + '</strong> | workflow: ' + r.workflowId + '<br/>' +
-          '<span class="' + cls + '">' + (r.ok ? 'SUCCESS' : 'FAILED') + '</span>' +
+          '<span class="' + cls + '">' + String(r.runStatus || (r.ok ? 'completed' : 'failed')).toUpperCase() + '</span>' +
           ' | steps: ' + r.stepCount + ' | attempts: ' + r.attemptCount + '<br/>' +
           'created: ' + new Date(r.createdAt).toLocaleString() +
           '</label>'
@@ -233,6 +323,7 @@ export const orchestratorUiRoutes: FastifyPluginAsync = async (app) => {
     document.getElementById('load-template').addEventListener('click', loadTemplate)
     document.getElementById('run').addEventListener('click', runWorkflow)
     document.getElementById('refresh-runs').addEventListener('click', refreshRuns)
+    document.getElementById('apply-filters').addEventListener('click', refreshRuns)
     document.getElementById('load-selected').addEventListener('click', loadSelectedTimeline)
 
     loadTemplate()

@@ -91,5 +91,9 @@
 - [x] T-21.1 Run Summary Endpoint
 - [x] T-21.2 Step Output Aggregation
 
-## Step 22 (next)
-- [ ] T-22.1 Observability Dashboard Filters
+## Step 22 (done)
+- [x] T-22.1 Observability Dashboard Filters
+
+## Step 23 (next)
+- [ ] T-23.1 Role-Based Access for Admin APIs
+- [ ] T-23.2 Agent API Key Authentication

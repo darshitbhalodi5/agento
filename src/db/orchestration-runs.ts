@@ -138,7 +138,73 @@ export interface OrchestrationRunListItem {
   attemptCount: number
 }
 
-export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRunListItem[]> {
+export interface ListOrchestrationRunsOptions {
+  limit?: number
+  workflowId?: string
+  runStatus?: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  provider?: string
+  dateFrom?: string
+  dateTo?: string
+}
+
+function buildRunFilterWhereClause(options: ListOrchestrationRunsOptions): {
+  whereSql: string
+  params: unknown[]
+} {
+  const clauses: string[] = []
+  const params: unknown[] = []
+  let idx = 1
+
+  if (options.workflowId) {
+    clauses.push(`r.workflow_id = $${idx}`)
+    params.push(options.workflowId)
+    idx += 1
+  }
+
+  if (options.runStatus) {
+    clauses.push(`r.run_status = $${idx}`)
+    params.push(options.runStatus)
+    idx += 1
+  }
+
+  if (options.provider) {
+    clauses.push(`
+      EXISTS (
+        SELECT 1
+        FROM orchestration_step_outcomes so_filter
+        WHERE so_filter.run_id = r.run_id
+          AND so_filter.chosen_service_id = $${idx}
+      )
+    `)
+    params.push(options.provider)
+    idx += 1
+  }
+
+  if (options.dateFrom) {
+    clauses.push(`r.created_at >= $${idx}::timestamptz`)
+    params.push(options.dateFrom)
+    idx += 1
+  }
+
+  if (options.dateTo) {
+    clauses.push(`r.created_at <= $${idx}::timestamptz`)
+    params.push(options.dateTo)
+    idx += 1
+  }
+
+  return {
+    whereSql: clauses.length > 0 ? `WHERE ${clauses.join(' AND ')}` : '',
+    params,
+  }
+}
+
+export async function listOrchestrationRuns(
+  options: ListOrchestrationRunsOptions = {},
+): Promise<OrchestrationRunListItem[]> {
+  const limit = options.limit ?? 30
+  const { whereSql, params } = buildRunFilterWhereClause(options)
+  const limitPlaceholder = `$${params.length + 1}`
+
   const result = await pool.query<{
     run_id: string
     workflow_id: string
@@ -166,12 +232,13 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
       FROM orchestration_runs r
       LEFT JOIN orchestration_step_outcomes so ON so.run_id = r.run_id
       LEFT JOIN orchestration_step_attempts sa ON sa.run_id = r.run_id
+      ${whereSql}
       GROUP BY
         r.run_id, r.workflow_id, r.ok, r.run_status, r.created_at, r.started_at, r.completed_at, r.error_message
       ORDER BY r.created_at DESC
-      LIMIT $1
+      LIMIT ${limitPlaceholder}
     `,
-    [limit],
+    [...params, limit],
   )
 
   return result.rows.map((row) => ({
@@ -186,6 +253,64 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
     stepCount: Number(row.step_count),
     attemptCount: Number(row.attempt_count),
   }))
+}
+
+export interface OrchestrationRunObservabilityMetrics {
+  runCount: number
+  avgRunDurationMs: number | null
+  avgFallbackDepth: number | null
+}
+
+export async function getOrchestrationRunObservabilityMetrics(
+  options: ListOrchestrationRunsOptions = {},
+): Promise<OrchestrationRunObservabilityMetrics> {
+  const { whereSql, params } = buildRunFilterWhereClause(options)
+  const result = await pool.query<{
+    run_count: string
+    avg_run_duration_ms: string | null
+    avg_fallback_depth: string | null
+  }>(
+    `
+      WITH filtered_runs AS (
+        SELECT
+          r.run_id,
+          r.started_at,
+          r.completed_at
+        FROM orchestration_runs r
+        ${whereSql}
+      ),
+      run_stats AS (
+        SELECT
+          fr.run_id,
+          fr.started_at,
+          fr.completed_at,
+          COUNT(DISTINCT so.step_id)::numeric AS step_count,
+          COUNT(sa.id)::numeric AS attempt_count
+        FROM filtered_runs fr
+        LEFT JOIN orchestration_step_outcomes so ON so.run_id = fr.run_id
+        LEFT JOIN orchestration_step_attempts sa ON sa.run_id = fr.run_id
+        GROUP BY fr.run_id, fr.started_at, fr.completed_at
+      )
+      SELECT
+        COUNT(*)::text AS run_count,
+        AVG(
+          CASE
+            WHEN started_at IS NULL OR completed_at IS NULL THEN NULL
+            ELSE EXTRACT(EPOCH FROM (completed_at - started_at)) * 1000
+          END
+        )::text AS avg_run_duration_ms,
+        AVG(GREATEST(attempt_count - step_count, 0))::text AS avg_fallback_depth
+      FROM run_stats
+    `,
+    params,
+  )
+
+  const row = result.rows[0]
+  return {
+    runCount: Number(row.run_count),
+    avgRunDurationMs: row.avg_run_duration_ms === null ? null : Number(row.avg_run_duration_ms),
+    avgFallbackDepth: row.avg_fallback_depth === null ? null : Number(row.avg_fallback_depth),
+  }
 }
 
 export interface OrchestrationRunSummary {
