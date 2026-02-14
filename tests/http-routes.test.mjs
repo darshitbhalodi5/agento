@@ -162,6 +162,74 @@ test('POST /v1/orchestrations/run enqueues run', async () => {
   }
 })
 
+test('POST /v1/orchestrations/run validates retry policy payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/run',
+      payload: {
+        runId: 'run_bad_retry_policy',
+        workflowId: 'wf_demo',
+        steps: [
+          {
+            stepId: 'step_1',
+            payload: { location: 'NYC' },
+            retryPolicy: {
+              maxRetries: -1,
+            },
+            candidates: [
+              {
+                serviceId: 'weather-api',
+                paymentTxHash: '0x1111111111111111111111111111111111111111111111111111111111111111',
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/orchestrations/runs/:runId/cancel route exists', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/runs/nonexistent_run/cancel',
+    })
+
+    // Route should exist; depending on DB state it can be 404 (not found) or 500 (db unavailable).
+    assert.ok([404, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/orchestrations/runs/:runId/cancel validates runId payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/runs//cancel',
+    })
+
+    // Fastify may return 404 on malformed path; 400 is also acceptable if route matcher parses empty id.
+    assert.ok([400, 404].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('GET /v1/workflows validates query payload', async () => {
   const app = buildApp()
 

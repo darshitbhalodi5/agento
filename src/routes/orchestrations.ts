@@ -3,8 +3,9 @@ import { z } from 'zod'
 import {
   getOrchestrationTimeline,
   listOrchestrationRuns,
+  requestOrchestrationRunCancellation,
 } from '../db/orchestration-runs.js'
-import { enqueueOrchestrationRun } from '../services/orchestration-queue.js'
+import { enqueueOrchestrationRun, markQueuedRunCancelled } from '../services/orchestration-queue.js'
 
 const candidateSchema = z.object({
   serviceId: z.string().min(1),
@@ -15,6 +16,16 @@ const stepSchema = z.object({
   stepId: z.string().min(1),
   payload: z.record(z.string(), z.unknown()),
   candidates: z.array(candidateSchema).min(1),
+  retryPolicy: z
+    .object({
+      maxRetries: z.coerce.number().int().min(0).max(5).optional(),
+      backoffMs: z.coerce.number().int().min(0).max(10_000).optional(),
+      backoffMultiplier: z.coerce.number().min(1).max(10).optional(),
+      maxBackoffMs: z.coerce.number().int().min(0).max(60_000).optional(),
+      retryableStatusCodes: z.array(z.coerce.number().int().min(100).max(599)).max(20).optional(),
+      retryableErrorCodes: z.array(z.string().min(1).max(128)).max(20).optional(),
+    })
+    .optional(),
 })
 
 const runSchema = z.object({
@@ -77,6 +88,55 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
+  app.post('/orchestrations/runs/:runId/cancel', async (request, reply) => {
+    const paramsSchema = z.object({
+      runId: z.string().min(1),
+    })
+
+    const parsed = paramsSchema.safeParse(request.params)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Invalid run id params',
+          details: parsed.error.flatten(),
+        },
+      })
+    }
+
+    const record = await requestOrchestrationRunCancellation(parsed.data.runId)
+    if (!record) {
+      return reply.status(404).send({
+        ok: false,
+        error: {
+          message: 'Run not found',
+        },
+      })
+    }
+
+    if (record.runStatus === 'cancelled') {
+      await markQueuedRunCancelled(record.runId)
+    }
+
+    if (record.runStatus === 'completed' || record.runStatus === 'failed') {
+      return reply.status(409).send({
+        ok: false,
+        error: {
+          message: `Run is already ${record.runStatus}`,
+        },
+        runId: record.runId,
+        runStatus: record.runStatus,
+      })
+    }
+
+    return reply.status(202).send({
+      ok: true,
+      runId: record.runId,
+      runStatus: record.runStatus,
+      cancelRequested: record.cancelRequested,
+    })
+  })
+
   app.get('/orchestrations/template', async (_request, reply) => {
     return reply.status(200).send({
       ok: true,
@@ -87,6 +147,11 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
           {
             stepId: 'step_1_price_discovery',
             payload: { location: 'NYC' },
+            retryPolicy: {
+              maxRetries: 2,
+              backoffMs: 200,
+              backoffMultiplier: 2,
+            },
             candidates: [
               {
                 serviceId: 'weather-api',

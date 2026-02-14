@@ -83,6 +83,10 @@
 - [x] T-19.1 Workflow Template Persistence
 - [x] T-19.2 Async Orchestration Runner
 
-## Step 20 (next)
-- [ ] T-20.1 Retry/Backoff Policies
-- [ ] T-20.2 Run Cancellation API
+## Step 20 (done)
+- [x] T-20.1 Retry/Backoff Policies
+- [x] T-20.2 Run Cancellation API
+
+## Step 21 (next)
+- [ ] T-21.1 Run Summary Endpoint
+- [ ] T-21.2 Step Output Aggregation

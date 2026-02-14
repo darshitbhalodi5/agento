@@ -1,4 +1,11 @@
 import { env } from '../config/env.js'
+import {
+  buildRetryPolicy,
+  getRetryDelayMs,
+  sleepMs,
+  type RetryPolicyInput,
+  shouldRetryAttempt,
+} from './retry-policy.js'
 
 export interface OrchestrationCandidate {
   serviceId: string
@@ -9,6 +16,7 @@ export interface OrchestrationStepInput {
   stepId: string
   payload: Record<string, unknown>
   candidates: OrchestrationCandidate[]
+  retryPolicy?: RetryPolicyInput
 }
 
 export interface OrchestrationRunInput {
@@ -37,7 +45,12 @@ export interface OrchestrationRunResult {
   ok: boolean
   runId: string
   workflowId: string
+  cancelled?: boolean
   steps: OrchestrationStepResult[]
+}
+
+export interface OrchestrationExecutionOptions {
+  shouldContinue?: (state: { runId: string; stepId: string; attempts: number }) => Promise<boolean> | boolean
 }
 
 function baseUrl() {
@@ -79,30 +92,79 @@ async function executeCandidate(input: {
   }
 }
 
-export async function runOrchestration(input: OrchestrationRunInput): Promise<OrchestrationRunResult> {
+export async function runOrchestration(
+  input: OrchestrationRunInput,
+  options?: OrchestrationExecutionOptions,
+): Promise<OrchestrationRunResult> {
   const steps: OrchestrationStepResult[] = []
 
   for (const step of input.steps) {
     const attempts: OrchestrationAttempt[] = []
     let chosenServiceId: string | null = null
     let succeeded = false
+    const retryPolicy = buildRetryPolicy(step.retryPolicy)
 
     for (let i = 0; i < step.candidates.length; i += 1) {
       const candidate = step.candidates[i]
-      const requestId = `${input.runId}_${step.stepId}_${i + 1}`
+      let retriesSoFar = 0
 
-      const attempt = await executeCandidate({
-        serviceId: candidate.serviceId,
-        requestId,
-        paymentTxHash: candidate.paymentTxHash,
-        payload: step.payload,
-      })
+      while (true) {
+        const shouldContinue = options?.shouldContinue
+          ? await options.shouldContinue({
+              runId: input.runId,
+              stepId: step.stepId,
+              attempts: attempts.length,
+            })
+          : true
+        if (!shouldContinue) {
+          steps.push({
+            stepId: step.stepId,
+            succeeded: false,
+            chosenServiceId: null,
+            attempts,
+          })
 
-      attempts.push(attempt)
+          return {
+            ok: false,
+            cancelled: true,
+            runId: input.runId,
+            workflowId: input.workflowId,
+            steps,
+          }
+        }
 
-      if (attempt.ok) {
-        succeeded = true
-        chosenServiceId = candidate.serviceId
+        const requestId = `${input.runId}_${step.stepId}_${i + 1}_a${retriesSoFar + 1}`
+
+        const attempt = await executeCandidate({
+          serviceId: candidate.serviceId,
+          requestId,
+          paymentTxHash: candidate.paymentTxHash,
+          payload: step.payload,
+        })
+
+        attempts.push(attempt)
+
+        if (attempt.ok) {
+          succeeded = true
+          chosenServiceId = candidate.serviceId
+          break
+        }
+
+        const retry = shouldRetryAttempt({
+          attempt,
+          retriesSoFar,
+          policy: retryPolicy,
+        })
+        if (!retry) {
+          break
+        }
+
+        retriesSoFar += 1
+        const delayMs = getRetryDelayMs(retryPolicy, retriesSoFar)
+        await sleepMs(delayMs)
+      }
+
+      if (succeeded) {
         break
       }
     }

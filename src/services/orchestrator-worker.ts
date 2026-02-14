@@ -1,7 +1,11 @@
 import type { FastifyBaseLogger } from 'fastify'
-import { persistOrchestrationRun } from '../db/orchestration-runs.js'
+import {
+  isOrchestrationRunCancellationRequested,
+  persistOrchestrationRun,
+} from '../db/orchestration-runs.js'
 import {
   claimNextQueuedRun,
+  markQueuedRunCancelled,
   markQueuedRunCompleted,
   markQueuedRunFailed,
 } from './orchestration-queue.js'
@@ -41,12 +45,20 @@ export function startOrchestratorWorker(options: OrchestratorWorkerOptions = {})
       }
 
       try {
-        const result = await runOrchestration(job.payload)
+        const result = await runOrchestration(job.payload, {
+          shouldContinue: async () => {
+            const cancellationRequested = await isOrchestrationRunCancellationRequested(job.runId)
+            return !cancellationRequested
+          },
+        })
         await persistOrchestrationRun({
           input: job.payload,
           result,
+          finalStatus: result.cancelled ? 'cancelled' : undefined,
         })
-        if (result.ok) {
+        if (result.cancelled) {
+          await markQueuedRunCancelled(job.runId)
+        } else if (result.ok) {
           await markQueuedRunCompleted(job.runId)
         } else {
           await markQueuedRunFailed(job.runId, 'ORCHESTRATION_FAILED')

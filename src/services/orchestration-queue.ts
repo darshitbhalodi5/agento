@@ -131,3 +131,19 @@ export async function markQueuedRunFailed(runId: string, errorMessage: string) {
 
   await markOrchestrationRunFailed(runId, errorMessage)
 }
+
+export async function markQueuedRunCancelled(runId: string) {
+  await pool.query(
+    `
+      UPDATE orchestration_run_queue
+      SET
+        queue_status = 'cancelled',
+        last_error = 'CANCELLED',
+        locked_at = NULL,
+        updated_at = NOW()
+      WHERE run_id = $1
+        AND queue_status IN ('queued', 'running')
+    `,
+    [runId],
+  )
+}

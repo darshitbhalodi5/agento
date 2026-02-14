@@ -17,8 +17,13 @@ function extractErrorCode(response: unknown): string | null {
 export async function persistOrchestrationRun(params: {
   input: OrchestrationRunInput
   result: OrchestrationRunResult
+  finalStatus?: 'completed' | 'failed' | 'cancelled'
+  errorMessage?: string | null
 }) {
   const { input, result } = params
+  const finalStatus =
+    params.finalStatus ?? (result.cancelled ? 'cancelled' : result.ok ? 'completed' : 'failed')
+  const errorMessage = params.errorMessage ?? (finalStatus === 'cancelled' ? 'CANCELLED' : null)
 
   const client = await pool.connect()
   try {
@@ -34,9 +39,9 @@ export async function persistOrchestrationRun(params: {
           ok = EXCLUDED.ok,
           run_status = EXCLUDED.run_status,
           completed_at = NOW(),
-          error_message = NULL
+          error_message = $5
       `,
-      [input.runId, input.workflowId, result.ok, result.ok ? 'completed' : 'failed'],
+      [input.runId, input.workflowId, result.ok, finalStatus, errorMessage],
     )
 
     await client.query('DELETE FROM orchestration_step_outcomes WHERE run_id = $1', [input.runId])
@@ -105,7 +110,7 @@ export interface OrchestrationRunListItem {
   runId: string
   workflowId: string
   ok: boolean
-  runStatus: 'queued' | 'running' | 'completed' | 'failed'
+  runStatus: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
   createdAt: string
   startedAt: string | null
   completedAt: string | null
@@ -119,7 +124,7 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
     run_id: string
     workflow_id: string
     ok: boolean
-    run_status: 'queued' | 'running' | 'completed' | 'failed'
+    run_status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
     created_at: string
     started_at: string | null
     completed_at: string | null
@@ -169,9 +174,18 @@ export async function markOrchestrationRunRunning(runId: string) {
     `
       UPDATE orchestration_runs
       SET
-        run_status = 'running',
-        started_at = COALESCE(started_at, NOW()),
-        error_message = NULL
+        run_status = CASE
+          WHEN run_status = 'cancelled' THEN run_status
+          ELSE 'running'
+        END,
+        started_at = CASE
+          WHEN run_status = 'cancelled' THEN started_at
+          ELSE COALESCE(started_at, NOW())
+        END,
+        error_message = CASE
+          WHEN run_status = 'cancelled' THEN error_message
+          ELSE NULL
+        END
       WHERE run_id = $1
     `,
     [runId],
@@ -188,9 +202,98 @@ export async function markOrchestrationRunFailed(runId: string, errorMessage: st
         completed_at = NOW(),
         error_message = $2
       WHERE run_id = $1
+        AND run_status <> 'cancelled'
     `,
     [runId, errorMessage],
   )
+}
+
+export async function isOrchestrationRunCancellationRequested(runId: string): Promise<boolean> {
+  const result = await pool.query<{ cancel_requested: boolean }>(
+    `
+      SELECT cancel_requested
+      FROM orchestration_runs
+      WHERE run_id = $1
+      LIMIT 1
+    `,
+    [runId],
+  )
+
+  if ((result.rowCount ?? 0) === 0) {
+    return false
+  }
+
+  return result.rows[0].cancel_requested
+}
+
+export interface OrchestrationCancellationRecord {
+  runId: string
+  runStatus: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  cancelRequested: boolean
+}
+
+export async function requestOrchestrationRunCancellation(
+  runId: string,
+): Promise<OrchestrationCancellationRecord | null> {
+  const existing = await pool.query<{
+    run_id: string
+    run_status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  }>(
+    `
+      SELECT run_id, run_status
+      FROM orchestration_runs
+      WHERE run_id = $1
+      LIMIT 1
+    `,
+    [runId],
+  )
+
+  if ((existing.rowCount ?? 0) === 0) {
+    return null
+  }
+
+  const status = existing.rows[0].run_status
+  if (status === 'completed' || status === 'failed' || status === 'cancelled') {
+    return {
+      runId,
+      runStatus: status,
+      cancelRequested: status === 'cancelled',
+    }
+  }
+
+  const result = await pool.query<{
+    run_id: string
+    run_status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+    cancel_requested: boolean
+  }>(
+    `
+      UPDATE orchestration_runs
+      SET
+        cancel_requested = TRUE,
+        run_status = CASE
+          WHEN run_status = 'queued' THEN 'cancelled'
+          ELSE run_status
+        END,
+        completed_at = CASE
+          WHEN run_status = 'queued' THEN NOW()
+          ELSE completed_at
+        END,
+        error_message = CASE
+          WHEN run_status = 'queued' THEN 'CANCELLED'
+          ELSE error_message
+        END
+      WHERE run_id = $1
+      RETURNING run_id, run_status, cancel_requested
+    `,
+    [runId],
+  )
+
+  const row = result.rows[0]
+  return {
+    runId: row.run_id,
+    runStatus: row.run_status,
+    cancelRequested: row.cancel_requested,
+  }
 }
 
 export interface OrchestrationTimelineRow {
