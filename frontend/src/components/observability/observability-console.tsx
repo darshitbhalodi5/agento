@@ -84,7 +84,6 @@ export function ObservabilityConsole() {
     await loadBillingSummary()
   }
 
-  const dashboardHref = `${session.apiBaseUrl}/v1/dashboard`
   const healthHref = `${session.apiBaseUrl}/v1/health`
 
   return (
@@ -102,9 +101,6 @@ export function ObservabilityConsole() {
         <button type="button" className="btn" onClick={runWalkthroughSnapshot}>
           Preset: Judge Snapshot
         </button>
-        <a className="btn link-btn" href={dashboardHref} target="_blank" rel="noreferrer">
-          Open Backend Dashboard
-        </a>
         <a className="btn link-btn" href={healthHref} target="_blank" rel="noreferrer">
           Open Health JSON
         </a>

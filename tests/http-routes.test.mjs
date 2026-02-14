@@ -2,6 +2,21 @@ import assert from 'node:assert/strict'
 import test from 'node:test'
 import { buildApp } from '../dist/app.js'
 
+function assertNoProviderOwnerHeaderError(res) {
+  if (res.statusCode !== 400) {
+    return
+  }
+
+  let body = null
+  try {
+    body = res.json()
+  } catch {
+    body = null
+  }
+
+  assert.notEqual(body?.error?.message, 'Missing x-owner-id header for provider access')
+}
+
 test('GET /v1/health returns service status', async () => {
   const app = buildApp()
 
@@ -21,56 +36,18 @@ test('GET /v1/health returns service status', async () => {
   }
 })
 
-test('GET /v1/app returns frontend html shell', async () => {
+test('legacy backend HTML routes are not registered', async () => {
   const app = buildApp()
 
   try {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/v1/app',
-    })
-
-    assert.equal(res.statusCode, 200)
-    assert.ok(String(res.headers['content-type']).includes('text/html'))
-    assert.match(res.body, /Agento Demo Console/)
-    assert.match(res.body, /Guided Demo Mode/)
-  } finally {
-    await app.close()
-  }
-})
-
-test('GET /v1/registry returns registry ui html shell', async () => {
-  const app = buildApp()
-
-  try {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/v1/registry',
-    })
-
-    assert.equal(res.statusCode, 200)
-    assert.ok(String(res.headers['content-type']).includes('text/html'))
-    assert.match(res.body, /Agento Registry/)
-    assert.match(res.body, /Service Catalog/)
-    assert.match(res.body, /Service Reputation/)
-  } finally {
-    await app.close()
-  }
-})
-
-test('GET /v1/orchestrator returns orchestration ui html shell', async () => {
-  const app = buildApp()
-
-  try {
-    const res = await app.inject({
-      method: 'GET',
-      url: '/v1/orchestrator',
-    })
-
-    assert.equal(res.statusCode, 200)
-    assert.ok(String(res.headers['content-type']).includes('text/html'))
-    assert.match(res.body, /Multi-Agent Orchestrator/)
-    assert.match(res.body, /Run History/)
+    const urls = ['/v1/app', '/v1/dashboard', '/v1/orchestrator', '/v1/registry']
+    for (const url of urls) {
+      const res = await app.inject({
+        method: 'GET',
+        url,
+      })
+      assert.equal(res.statusCode, 404)
+    }
   } finally {
     await app.close()
   }
@@ -428,6 +405,31 @@ test('POST /v1/workflows requires owner header for provider role', async () => {
   }
 })
 
+test('POST /v1/workflows with provider owner header passes ownership gate', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/workflows',
+      headers: {
+        'x-user-role': 'provider',
+        'x-owner-id': 'provider_demo_owner',
+      },
+      payload: {
+        workflowId: 'wf_provider_owned_create',
+        name: 'Provider Owned Create',
+        stepGraph: { nodes: [], edges: [] },
+      },
+    })
+
+    assertNoProviderOwnerHeaderError(res)
+    assert.ok([201, 409, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('PUT /v1/workflows/:workflowId validates update payload', async () => {
   const app = buildApp()
 
@@ -592,6 +594,26 @@ test('GET /v1/agent-keys requires owner header for provider role', async () => {
   }
 })
 
+test('GET /v1/agent-keys with provider owner header passes ownership gate', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/agent-keys',
+      headers: {
+        'x-user-role': 'provider',
+        'x-owner-id': 'provider_demo_owner',
+      },
+    })
+
+    assertNoProviderOwnerHeaderError(res)
+    assert.ok([200, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/registry/agents requires owner header for provider role', async () => {
   const app = buildApp()
 
@@ -733,6 +755,31 @@ test('POST /v1/billing/models requires owner header for provider role', async ()
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/billing/models with provider owner header passes ownership gate', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/billing/models',
+      headers: {
+        'x-user-role': 'provider',
+        'x-owner-id': 'provider_demo_owner',
+      },
+      payload: {
+        serviceId: 'service_owned_lookup_test',
+        modelType: 'fixed',
+        fixedPriceAtomic: '1000',
+      },
+    })
+
+    assertNoProviderOwnerHeaderError(res)
+    assert.ok([200, 403, 404, 500].includes(res.statusCode))
   } finally {
     await app.close()
   }
@@ -902,6 +949,29 @@ test('POST /v1/policies requires owner header for provider role', async () => {
   }
 })
 
+test('POST /v1/policies with provider owner header passes ownership gate', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/policies',
+      headers: {
+        'x-user-role': 'provider',
+        'x-owner-id': 'provider_demo_owner',
+      },
+      payload: {
+        serviceId: 'service_owned_lookup_test',
+      },
+    })
+
+    assertNoProviderOwnerHeaderError(res)
+    assert.ok([200, 403, 404, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/registry/services requires owner header for provider role', async () => {
   const app = buildApp()
 
@@ -926,6 +996,35 @@ test('POST /v1/registry/services requires owner header for provider role', async
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/registry/services with provider owner header passes ownership gate', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/services',
+      headers: {
+        'x-user-role': 'provider',
+        'x-owner-id': 'provider_demo_owner',
+      },
+      payload: {
+        id: 'service-provider-owner-positive',
+        name: 'Owner Header Present Service',
+        providerWallet: '0x031891A61200FedDd622EbACC10734BC90093B2A',
+        tokenAddress: '0x20c0000000000000000000000000000000000001',
+        priceAtomic: '1000',
+        memoPrefix: 'api',
+        tags: [],
+      },
+    })
+
+    assertNoProviderOwnerHeaderError(res)
+    assert.ok([200, 403, 500].includes(res.statusCode))
   } finally {
     await app.close()
   }

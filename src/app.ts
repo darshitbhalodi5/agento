@@ -2,18 +2,14 @@ import Fastify from 'fastify'
 import { env } from './config/env.js'
 import { agentApiKeyRoutes } from './routes/agent-api-keys.js'
 import { billingModelRoutes } from './routes/billing-models.js'
-import { dashboardRoutes } from './routes/dashboard.js'
 import { downstreamMockRoutes } from './routes/downstream-mock.js'
-import { frontendRoutes } from './routes/frontend.js'
 import { healthRoutes } from './routes/health.js'
 import { paymentRoutes } from './routes/payments.js'
 import { billingRoutes } from './routes/billing.js'
 import { policyRoutes } from './routes/policies.js'
 import { reputationRoutes } from './routes/reputation.js'
 import { orchestrationRoutes } from './routes/orchestrations.js'
-import { orchestratorUiRoutes } from './routes/orchestrator-ui.js'
 import { registryRoutes } from './routes/registry.js'
-import { registryUiRoutes } from './routes/registry-ui.js'
 import { workflowRoutes } from './routes/workflows.js'
 
 function buildAllowedOrigins() {
@@ -66,10 +62,6 @@ export function buildApp() {
   })
 
   app.register(healthRoutes, { prefix: '/v1' })
-  app.register(frontendRoutes, { prefix: '/v1' })
-  app.register(orchestratorUiRoutes, { prefix: '/v1' })
-  app.register(registryUiRoutes, { prefix: '/v1' })
-  app.register(dashboardRoutes, { prefix: '/v1' })
   app.register(agentApiKeyRoutes, { prefix: '/v1' })
   app.register(billingModelRoutes, { prefix: '/v1' })
   app.register(billingRoutes, { prefix: '/v1' })

@@ -9,7 +9,7 @@ Execute API requests only after verified on-chain payment proof.
 - Backend: Fastify (TypeScript)
 - Database: Postgres
 - Chain integration: viem + Tempo actions
-- Dashboard: minimal read-only
+- Frontend: Next.js (`frontend/`)
 
 ## Incremental Delivery
 We ship in small slices and push after every slice.
@@ -130,45 +130,27 @@ Environment variables:
 
 The execute endpoint forwards verified requests to the protected mock downstream route using `x-internal-api-key`.
 
-## Dashboard (Step 9)
-Read-only dashboard route:
-```bash
-open http://localhost:3000/v1/dashboard
-```
-
-It shows:
-- total requests
-- verified payments
-- replay blocks
-- execution success/failure
-- recent request table with statuses and error codes
-
 ## Frontend Direction
 - lightweight demo frontend for quote/execute/status flow
-- `/v1/dashboard` remains operational telemetry UI
+- separate Next.js app for operator/demo UX at `http://localhost:3001`
 
 Why this is included:
 - judges can follow the problem-solution flow faster
 - reduces dependence on raw curl commands during live demo
 
 ## Frontend Demo App (Step 11)
-UI route:
+Frontend app route:
 ```bash
-http://localhost:3000/v1/app
+http://localhost:3001
 ```
 
 Includes:
 - Quote form (`POST /v1/payments/quote`)
 - Execute form (`POST /v1/payments/execute`)
 - Request status lookup (`GET /v1/requests/:requestId?serviceId=...`)
-- Quick links to telemetry dashboard and health endpoint
+- health endpoint quick link
 
 ## Agent Registry + Catalog (Step 13)
-UI route:
-```bash
-http://localhost:3000/v1/registry
-```
-
 Backend routes:
 - `GET /v1/registry/agents`
 - `POST /v1/registry/agents`
@@ -222,7 +204,7 @@ Optional sorting:
 - `sort=rank_desc`
 
 ## Marketplace UI Upgrade (T-18.4)
-`GET /v1/registry` now includes:
+Frontend registry page now includes:
 - filter controls for tag, capability, active state, price range, and sort mode
 - sortable service catalog cards with rank + reputation context
 - interactive provider/service detail panels for pitch demos
@@ -233,7 +215,7 @@ API route:
 - `GET /v1/reputation/services?limit=50`
 
 Frontend:
-- reputation cards rendered in `/v1/registry`
+- reputation cards rendered in the frontend registry page
 - metrics per service:
   - success rate
   - failure rate
@@ -241,9 +223,6 @@ Frontend:
   - last run timestamp
 
 ## Multi-Agent Orchestration MVP (Step 15)
-UI route:
-- `GET /v1/orchestrator`
-
 API routes:
 - `GET /v1/orchestrations/template`
 - `POST /v1/orchestrations/run`
@@ -263,7 +242,7 @@ Includes:
 - persistent orchestration run history
 - per-step outcome persistence
 - attempt timeline with tx hash, status code, and error code
-- run history + timeline panels on `/v1/orchestrator`
+- run history + timeline panels in the frontend orchestrations page
 
 ## Billing Models (T-17.1)
 API routes:
@@ -342,9 +321,19 @@ Policy payload (`POST /v1/policies`) fields:
 
 ## Step 12 Polish
 Added:
-- guided demo mode presets (happy-path and error-path inputs) in `/v1/app`
+- guided demo mode presets (happy-path and error-path inputs) in frontend UX
 - one-click helpers for quote and status actions
 - submission walkthrough/checklist doc
+
+## Ownership Model
+Provider-scoped access is enforced with request headers:
+- `x-user-role: provider`
+- `x-owner-id: <provider_id>`
+
+Rules:
+- provider write/read operations are restricted to rows with matching `owner_id`
+- admin can operate without `x-owner-id`
+- provider requests without `x-owner-id` are rejected with validation error
 
 Walkthrough doc:
 - `docs/SUBMISSION_WALKTHROUGH.md`
