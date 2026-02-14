@@ -6,6 +6,7 @@ import {
   listWorkflowTemplates,
   updateWorkflowTemplate,
 } from '../db/workflow-templates.js'
+import { requireRoles } from '../middleware/authz.js'
 
 interface PgErrorLike {
   code?: string
@@ -112,7 +113,7 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/workflows', async (request, reply) => {
+  app.post('/workflows', { preHandler: requireRoles('admin') }, async (request, reply) => {
     const parsed = createSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
@@ -152,7 +153,7 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  app.put('/workflows/:workflowId', async (request, reply) => {
+  app.put('/workflows/:workflowId', { preHandler: requireRoles('admin') }, async (request, reply) => {
     const paramsParsed = paramsSchema.safeParse(request.params)
     if (!paramsParsed.success) {
       return reply.status(400).send({

@@ -387,6 +387,9 @@ test('POST /v1/workflows validates required workflow template fields', async () 
     const res = await app.inject({
       method: 'POST',
       url: '/v1/workflows',
+      headers: {
+        'x-user-role': 'admin',
+      },
       payload: {
         workflowId: 'wf_missing_fields',
       },
@@ -407,12 +410,41 @@ test('PUT /v1/workflows/:workflowId validates update payload', async () => {
     const res = await app.inject({
       method: 'PUT',
       url: '/v1/workflows/wf_demo',
+      headers: {
+        'x-user-role': 'admin',
+      },
       payload: {},
     })
 
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/workflows rejects non-admin role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/workflows',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        workflowId: 'wf_forbidden',
+        name: 'Forbidden',
+        stepGraph: { nodes: [], edges: [] },
+      },
+    })
+
+    assert.equal(res.statusCode, 403)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
   } finally {
     await app.close()
   }
