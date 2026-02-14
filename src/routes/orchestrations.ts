@@ -8,6 +8,7 @@ import {
   requestOrchestrationRunCancellation,
 } from '../db/orchestration-runs.js'
 import { enqueueOrchestrationRun, markQueuedRunCancelled } from '../services/orchestration-queue.js'
+import { requireAgentApiKey } from '../middleware/agent-auth.js'
 
 const candidateSchema = z.object({
   serviceId: z.string().min(1),
@@ -232,7 +233,7 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/orchestrations/run', async (request, reply) => {
+  app.post('/orchestrations/run', { preHandler: requireAgentApiKey }, async (request, reply) => {
     const parsed = runSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({

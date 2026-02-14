@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { getBillingModelByServiceId, upsertBillingModel } from '../db/billing-models.js'
+import { requireRoles } from '../middleware/authz.js'
 
 const querySchema = z.object({
   serviceId: z.string().min(1),
@@ -51,7 +52,7 @@ export const billingModelRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(200).send({ ok: true, billingModel: record })
   })
 
-  app.post('/billing/models', async (request, reply) => {
+  app.post('/billing/models', { preHandler: requireRoles('admin') }, async (request, reply) => {
     const parsed = upsertSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({

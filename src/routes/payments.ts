@@ -14,6 +14,7 @@ import {
 import { executeDownstreamCall } from '../services/downstream-client.js'
 import { verifyPaymentTx } from '../services/payment-verification.js'
 import { evaluateServicePolicyForExecute } from '../services/policy-engine.js'
+import { requireAgentApiKey } from '../middleware/agent-auth.js'
 
 const apiErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
@@ -152,7 +153,7 @@ export const paymentRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(200).send(checked)
   })
 
-  app.post('/payments/execute', async (request, reply) => {
+  app.post('/payments/execute', { preHandler: requireAgentApiKey }, async (request, reply) => {
     const logUsage = async (params: Parameters<typeof insertUsageLedgerEntry>[0]) => {
       try {
         await insertUsageLedgerEntry(params)

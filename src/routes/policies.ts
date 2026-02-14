@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { getServicePolicyByServiceId, listServicePolicies, upsertServicePolicy } from '../db/service-policies.js'
+import { requireRoles } from '../middleware/authz.js'
 
 const getQuerySchema = z.object({
   serviceId: z.string().min(1).optional(),
@@ -55,7 +56,7 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/policies', async (request, reply) => {
+  app.post('/policies', { preHandler: requireRoles('admin') }, async (request, reply) => {
     const parsed = upsertSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
@@ -83,4 +84,3 @@ export const policyRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 }
-

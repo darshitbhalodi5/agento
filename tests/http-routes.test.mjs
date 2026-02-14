@@ -181,6 +181,9 @@ test('POST /v1/orchestrations/run validates payload', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/v1/orchestrations/run',
+      headers: {
+        'x-agent-api-key': 'agento-dev-agent-key',
+      },
       payload: {
         runId: 'run_bad_payload',
         workflowId: 'wf_demo',
@@ -203,6 +206,9 @@ test('POST /v1/orchestrations/run enqueues run', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/v1/orchestrations/run',
+      headers: {
+        'x-agent-api-key': 'agento-dev-agent-key',
+      },
       payload: {
         runId: 'run_test_async_1',
         workflowId: 'wf_demo',
@@ -235,6 +241,9 @@ test('POST /v1/orchestrations/run validates retry policy payload', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/v1/orchestrations/run',
+      headers: {
+        'x-agent-api-key': 'agento-dev-agent-key',
+      },
       payload: {
         runId: 'run_bad_retry_policy',
         workflowId: 'wf_demo',
@@ -259,6 +268,64 @@ test('POST /v1/orchestrations/run validates retry policy payload', async () => {
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/orchestrations/run rejects request without agent api key', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/orchestrations/run',
+      payload: {
+        runId: 'run_no_key',
+        workflowId: 'wf_demo',
+        steps: [
+          {
+            stepId: 'step_1',
+            payload: { location: 'NYC' },
+            candidates: [
+              {
+                serviceId: 'weather-api',
+                paymentTxHash: '0x1111111111111111111111111111111111111111111111111111111111111111',
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    assert.equal(res.statusCode, 401)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AGENT_API_KEY_MISSING')
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/payments/execute rejects request without agent api key', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/payments/execute',
+      payload: {
+        serviceId: 'weather-api',
+        requestId: 'req_missing_key',
+        paymentTxHash: '0x1111111111111111111111111111111111111111111111111111111111111111',
+        payload: { location: 'NYC' },
+      },
+    })
+
+    assert.equal(res.statusCode, 401)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AGENT_API_KEY_MISSING')
   } finally {
     await app.close()
   }
@@ -391,6 +458,9 @@ test('POST /v1/billing/models validates fixed model price requirements', async (
     const res = await app.inject({
       method: 'POST',
       url: '/v1/billing/models',
+      headers: {
+        'x-user-role': 'admin',
+      },
       payload: {
         serviceId: 'weather-api',
         modelType: 'fixed',
@@ -403,6 +473,32 @@ test('POST /v1/billing/models validates fixed model price requirements', async (
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/billing/models rejects non-admin role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/billing/models',
+      headers: {
+        'x-user-role': 'viewer',
+      },
+      payload: {
+        serviceId: 'weather-api',
+        modelType: 'fixed',
+        fixedPriceAtomic: '1000',
+      },
+    })
+
+    assert.equal(res.statusCode, 403)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
   } finally {
     await app.close()
   }
@@ -449,6 +545,9 @@ test('POST /v1/policies validates payload fields', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/v1/policies',
+      headers: {
+        'x-user-role': 'admin',
+      },
       payload: {
         serviceId: '',
       },
@@ -462,6 +561,30 @@ test('POST /v1/policies validates payload fields', async () => {
   }
 })
 
+test('POST /v1/policies rejects non-admin role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/policies',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        serviceId: 'weather-api',
+      },
+    })
+
+    assert.equal(res.statusCode, 403)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/registry/agents validates metadata url fields', async () => {
   const app = buildApp()
 
@@ -469,6 +592,9 @@ test('POST /v1/registry/agents validates metadata url fields', async () => {
     const res = await app.inject({
       method: 'POST',
       url: '/v1/registry/agents',
+      headers: {
+        'x-user-role': 'provider',
+      },
       payload: {
         id: 'agent-meta-test',
         name: 'Agent Meta Test',
@@ -492,6 +618,9 @@ test('POST /v1/registry/agents validates deprecated metadata type', async () => 
     const res = await app.inject({
       method: 'POST',
       url: '/v1/registry/agents',
+      headers: {
+        'x-user-role': 'provider',
+      },
       payload: {
         id: 'agent-meta-test-2',
         name: 'Agent Meta Test 2',
@@ -503,6 +632,34 @@ test('POST /v1/registry/agents validates deprecated metadata type', async () => 
     assert.equal(res.statusCode, 400)
     const body = res.json()
     assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/registry/services rejects viewer role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/services',
+      headers: {
+        'x-user-role': 'viewer',
+      },
+      payload: {
+        id: 'svc-authz-test',
+        name: 'Authz Test Service',
+        providerWallet: '0x1111111111111111111111111111111111111111',
+        tokenAddress: '0x2222222222222222222222222222222222222222',
+        priceAtomic: '1000',
+      },
+    })
+
+    assert.equal(res.statusCode, 403)
+    const body = res.json()
+    assert.equal(body.ok, false)
+    assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
   } finally {
     await app.close()
   }

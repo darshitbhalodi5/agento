@@ -14,7 +14,9 @@
     "check": "tsc --noEmit",
     "db:migrate": "npm run build --silent && node dist/db/migrate.js",
     "db:check": "npm run build --silent && node dist/db/check.js",
-    "demo": "bash scripts/demo_flow.sh"
+    "demo": "bash scripts/demo_flow.sh",
+    "perf:health": "k6 run tests/perf/health.k6.js",
+    "perf:orchestrations": "k6 run tests/perf/orchestrations-run.k6.js"
   },
   "repository": {
     "type": "git",

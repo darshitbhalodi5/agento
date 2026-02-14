@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { listAgents, listRegistryServices, upsertAgent, upsertRegistryService } from '../db/registry.js'
+import { requireRoles } from '../middleware/authz.js'
 
 const agentSchema = z.object({
   id: z.string().min(1),
@@ -59,7 +60,7 @@ export const registryRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(200).send({ ok: true, agents })
   })
 
-  app.post('/registry/agents', async (request, reply) => {
+  app.post('/registry/agents', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
     const parsed = agentSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send(fail('Invalid agent payload', parsed.error.flatten()))
@@ -86,7 +87,7 @@ export const registryRoutes: FastifyPluginAsync = async (app) => {
     return reply.status(200).send({ ok: true, services })
   })
 
-  app.post('/registry/services', async (request, reply) => {
+  app.post('/registry/services', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
     const parsed = serviceSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send(fail('Invalid service payload', parsed.error.flatten()))

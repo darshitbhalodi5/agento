@@ -94,6 +94,10 @@
 ## Step 22 (done)
 - [x] T-22.1 Observability Dashboard Filters
 
-## Step 23 (next)
-- [ ] T-23.1 Role-Based Access for Admin APIs
-- [ ] T-23.2 Agent API Key Authentication
+## Step 23 (in progress)
+- [x] T-23.1 Role-Based Access for Admin APIs
+- [x] T-23.2 Agent API Key Authentication
+
+## Step 24 (in progress)
+- [x] T-24.1 Load/Soak Test Suite
+- [ ] T-24.2 Deployment Hardening Checklist
