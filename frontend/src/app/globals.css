@@ -327,6 +327,53 @@ h3 {
   text-decoration: none;
 }
 
+.walkthrough-list {
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 10px;
+}
+
+.walkthrough-item {
+  display: grid;
+  grid-template-columns: 26px 1fr;
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.walkthrough-index {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.walkthrough-link {
+  color: var(--text);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+.walkthrough-link:hover {
+  color: var(--accent);
+}
+
+.walkthrough-item p {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
 ul {
   margin: 0;
   padding-left: 20px;

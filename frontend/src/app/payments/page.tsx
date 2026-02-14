@@ -10,6 +10,7 @@ export default function PaymentsPage() {
         <p className="subtitle">
           Full payment interaction flow is now available in Next.js using shared API client and session controls.
         </p>
+        <p className="subtitle">Use preset buttons below to switch between happy-path and deterministic error-path demos.</p>
       </section>
 
       <PaymentsConsole />

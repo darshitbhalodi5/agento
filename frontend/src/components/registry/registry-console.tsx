@@ -3,6 +3,7 @@
 import { useState } from 'react'
 import { apiGet, apiPost } from '../../lib/api-client'
 import { buildAuthHeaders, useSessionStore } from '../../lib/session-store'
+import { registryDemoDefaults } from '../../lib/demo-presets'
 
 interface RegistryAgent {
   id: string
@@ -43,7 +44,7 @@ function parseCsv(input: string): string[] {
 }
 
 export function RegistryConsole() {
-  const { session } = useSessionStore()
+  const { session, setUserRole } = useSessionStore()
   const headers = buildAuthHeaders(session)
 
   const [agentForm, setAgentForm] = useState({
@@ -85,6 +86,34 @@ export function RegistryConsole() {
   const [agentOut, setAgentOut] = useState('No agent write yet.')
   const [serviceOut, setServiceOut] = useState('No service write yet.')
   const [queryOut, setQueryOut] = useState('No registry query yet.')
+
+  function applyWritePreset() {
+    setUserRole(registryDemoDefaults.writeRole)
+    setAgentForm((prev) => ({
+      ...prev,
+      id: `agent_demo_${Date.now()}`,
+      name: 'Agent Demo Provider',
+      capabilities: 'weather-forecast,pay-per-call',
+    }))
+    setServiceForm((prev) => ({
+      ...prev,
+      id: `weather-api-${Date.now()}`,
+      name: 'Weather API Demo',
+      priceAtomic: '1000',
+      tags: 'weather,api,capability:weather-forecast',
+    }))
+  }
+
+  function applyDiscoveryPreset() {
+    setFilters({
+      tag: 'weather',
+      capability: 'weather-forecast',
+      active: 'true',
+      price_min: '',
+      price_max: '',
+      sort: 'rank_desc',
+    })
+  }
 
   async function createAgent() {
     const result = await apiPost(
@@ -168,6 +197,14 @@ export function RegistryConsole() {
       <p className="subtitle">
         Write endpoints require role headers. Use <code>provider</code> or <code>admin</code> in session controls.
       </p>
+      <div className="actions-row">
+        <button type="button" className="btn" onClick={applyWritePreset}>
+          Preset: Provider Write Demo
+        </button>
+        <button type="button" className="btn" onClick={applyDiscoveryPreset}>
+          Preset: Discovery Demo
+        </button>
+      </div>
 
       <div className="registry-grid">
         <article className="panel">

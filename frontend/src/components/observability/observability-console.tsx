@@ -79,6 +79,11 @@ export function ObservabilityConsole() {
     setBillingOut(pretty(result.ok ? result.data : result))
   }
 
+  async function runWalkthroughSnapshot() {
+    await refreshObservability()
+    await loadBillingSummary()
+  }
+
   const dashboardHref = `${session.apiBaseUrl}/v1/dashboard`
   const healthHref = `${session.apiBaseUrl}/v1/health`
 
@@ -93,6 +98,9 @@ export function ObservabilityConsole() {
         </button>
         <button type="button" className="btn" onClick={loadBillingSummary}>
           Load Billing Summary (24h)
+        </button>
+        <button type="button" className="btn" onClick={runWalkthroughSnapshot}>
+          Preset: Judge Snapshot
         </button>
         <a className="btn link-btn" href={dashboardHref} target="_blank" rel="noreferrer">
           Open Backend Dashboard

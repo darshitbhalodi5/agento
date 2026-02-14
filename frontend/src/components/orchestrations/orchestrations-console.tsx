@@ -3,6 +3,7 @@
 import { useMemo, useState } from 'react'
 import { apiGet, apiPost } from '../../lib/api-client'
 import { buildAuthHeaders, useSessionStore } from '../../lib/session-store'
+import { orchestrationDemoPresets } from '../../lib/demo-presets'
 
 interface RunRecord {
   runId: string
@@ -170,12 +171,40 @@ export function OrchestrationsConsole() {
     setRunOut(pretty(result.ok ? result.data : result))
   }
 
+  function applyHappyPreset() {
+    const runId = `${orchestrationDemoPresets.happy.runIdPrefix}_${Date.now()}`
+    setRunForm({
+      runId,
+      workflowId: orchestrationDemoPresets.happy.workflowId,
+      stepsText:
+        '[{"stepId":"step_1","payload":{"location":"NYC"},"candidates":[{"serviceId":"weather-api","paymentTxHash":"0x1111111111111111111111111111111111111111111111111111111111111111"}]},{"stepId":"step_2","payload":{"mode":"confirm"},"candidates":[{"serviceId":"weather-api","paymentTxHash":"0x2222222222222222222222222222222222222222222222222222222222222222"}]}]',
+    })
+  }
+
+  function applyErrorPreset() {
+    const runId = `${orchestrationDemoPresets.error.runIdPrefix}_${Date.now()}`
+    setRunForm({
+      runId,
+      workflowId: orchestrationDemoPresets.error.workflowId,
+      stepsText:
+        '[{"stepId":"step_fail","payload":{"location":"NYC"},"candidates":[{"serviceId":"weather-api","paymentTxHash":"0x1111111111111111111111111111111111111111111111111111111111111111"}],"retryPolicy":{"maxRetries":1,"backoffMs":100}}]',
+    })
+  }
+
   return (
     <section className="card">
       <h2>Orchestrations Console</h2>
       <p className="subtitle">
         Requires <code>x-agent-api-key</code> for run enqueue. Use session controls to set the key and API base URL.
       </p>
+      <div className="actions-row">
+        <button type="button" className="btn" onClick={applyHappyPreset}>
+          Preset: Happy Path Run
+        </button>
+        <button type="button" className="btn" onClick={applyErrorPreset}>
+          Preset: Error Path Run
+        </button>
+      </div>
 
       <div className="orchestration-grid">
         <article className="panel">
