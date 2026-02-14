@@ -1,5 +1,5 @@
 import { AppShell } from '../../components/app-shell'
-import { SectionCard } from '../../components/section-card'
+import { ObservabilityConsole } from '../../components/observability/observability-console'
 
 export default function ObservabilityPage() {
   return (
@@ -7,16 +7,10 @@ export default function ObservabilityPage() {
       <section className="hero">
         <p className="eyebrow">Observability</p>
         <h1>Operational Evidence and Read Models</h1>
-        <p className="subtitle">
-          This page will be implemented in FE-08 with frontend metrics cards and links to backend telemetry dashboards.
-        </p>
+        <p className="subtitle">Frontend metrics cards and backend telemetry links are now available for judge/operator workflows.</p>
       </section>
-      <SectionCard title="Status">
-        <ul>
-          <li>Ticket: FE-08</li>
-          <li>State: planned</li>
-        </ul>
-      </SectionCard>
+
+      <ObservabilityConsole />
     </AppShell>
   )
 }

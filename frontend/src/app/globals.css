@@ -211,6 +211,32 @@ h2 {
   gap: 12px;
 }
 
+.metrics-grid {
+  display: grid;
+  gap: 10px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-bottom: 12px;
+}
+
+.metric-card {
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  padding: 10px;
+}
+
+.metric-key {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.metric-value {
+  margin: 6px 0 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
 .registry-lists {
   margin-top: 12px;
   display: grid;
@@ -297,6 +323,10 @@ h3 {
   cursor: pointer;
 }
 
+.link-btn {
+  text-decoration: none;
+}
+
 ul {
   margin: 0;
   padding-left: 20px;
@@ -330,6 +360,10 @@ code {
   }
 
   .registry-lists {
+    grid-template-columns: 1fr;
+  }
+
+  .metrics-grid {
     grid-template-columns: 1fr;
   }
 
