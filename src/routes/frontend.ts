@@ -236,6 +236,10 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
             <label for="exec-payload">Payload JSON</label>
             <textarea id="exec-payload" name="payload">{"location":"NYC"}</textarea>
           </div>
+          <div class="field">
+            <label for="exec-agent-key">Agent API Key</label>
+            <input id="exec-agent-key" name="agentApiKey" value="agento-dev-agent-key" required />
+          </div>
           <button type="submit" class="main alt">Verify + Execute</button>
         </form>
         <div id="execute-status" class="tips"></div>
@@ -282,10 +286,10 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
       }
     }
 
-    async function postJson(url, payload) {
+    async function postJson(url, payload, extraHeaders = {}) {
       const res = await fetch(url, {
         method: 'POST',
-        headers: { 'content-type': 'application/json' },
+        headers: { 'content-type': 'application/json', ...extraHeaders },
         body: JSON.stringify(payload),
       })
       const data = await res.json().catch(() => ({}))
@@ -362,8 +366,9 @@ export const frontendRoutes: FastifyPluginAsync = async (app) => {
         paymentTxHash: String(fd.get('paymentTxHash') || ''),
         payload: parsedPayload,
       }
+      const agentApiKey = String(fd.get('agentApiKey') || '').trim()
 
-      const out = await postJson('/v1/payments/execute', payload)
+      const out = await postJson('/v1/payments/execute', payload, { 'x-agent-api-key': agentApiKey })
       setStatus(executeStatus, out.ok, 'HTTP ' + out.status)
       executeResult.textContent = pretty(out.data)
 
