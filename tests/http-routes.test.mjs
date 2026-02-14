@@ -403,6 +403,31 @@ test('POST /v1/workflows validates required workflow template fields', async () 
   }
 })
 
+test('POST /v1/workflows requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/workflows',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        workflowId: 'wf_provider_owner_required',
+        name: 'Provider Owner Required',
+        stepGraph: { nodes: [], edges: [] },
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('PUT /v1/workflows/:workflowId validates update payload', async () => {
   const app = buildApp()
 
@@ -424,6 +449,29 @@ test('PUT /v1/workflows/:workflowId validates update payload', async () => {
   }
 })
 
+test('PUT /v1/workflows/:workflowId requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'PUT',
+      url: '/v1/workflows/wf_demo',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        name: 'Updated Name',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/workflows rejects non-admin role', async () => {
   const app = buildApp()
 
@@ -432,7 +480,7 @@ test('POST /v1/workflows rejects non-admin role', async () => {
       method: 'POST',
       url: '/v1/workflows',
       headers: {
-        'x-user-role': 'provider',
+        'x-user-role': 'viewer',
       },
       payload: {
         workflowId: 'wf_forbidden',

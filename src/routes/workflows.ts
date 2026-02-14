@@ -3,10 +3,11 @@ import { z } from 'zod'
 import {
   createWorkflowTemplate,
   getWorkflowTemplateById,
+  getWorkflowTemplateOwnerId,
   listWorkflowTemplates,
   updateWorkflowTemplate,
 } from '../db/workflow-templates.js'
-import { requireRoles } from '../middleware/authz.js'
+import { readOwnerIdFromHeader, readRoleFromHeader, requireRoles } from '../middleware/authz.js'
 
 interface PgErrorLike {
   code?: string
@@ -73,9 +74,13 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    const role = readRoleFromHeader(request)
+    const ownerId = readOwnerIdFromHeader(request)
+
     const templates = await listWorkflowTemplates({
       limit: parsed.data.limit,
       active: parsed.data.active,
+      ownerId: role === 'provider' && ownerId ? ownerId : undefined,
     })
 
     return reply.status(200).send({
@@ -113,7 +118,7 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
     })
   })
 
-  app.post('/workflows', { preHandler: requireRoles('admin') }, async (request, reply) => {
+  app.post('/workflows', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
     const parsed = createSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send({
@@ -125,10 +130,22 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
       })
     }
 
+    const role = readRoleFromHeader(request)
+    const ownerId = readOwnerIdFromHeader(request)
+    if (role === 'provider' && !ownerId) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Missing x-owner-id header for provider access',
+        },
+      })
+    }
+
     try {
       const template = await createWorkflowTemplate({
         workflowId: parsed.data.workflowId,
         name: parsed.data.name,
+        ownerId: role === 'provider' ? ownerId : null,
         description: parsed.data.description ?? null,
         stepGraph: parsed.data.stepGraph,
         defaultPolicies: parsed.data.defaultPolicies,
@@ -153,7 +170,7 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
     }
   })
 
-  app.put('/workflows/:workflowId', { preHandler: requireRoles('admin') }, async (request, reply) => {
+  app.put('/workflows/:workflowId', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
     const paramsParsed = paramsSchema.safeParse(request.params)
     if (!paramsParsed.success) {
       return reply.status(400).send({
@@ -174,6 +191,43 @@ export const workflowRoutes: FastifyPluginAsync = async (app) => {
           details: bodyParsed.error.flatten(),
         },
       })
+    }
+
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return reply.status(400).send({
+          ok: false,
+          error: {
+            message: 'Missing x-owner-id header for provider access',
+          },
+        })
+      }
+
+      const workflowOwnerId = await getWorkflowTemplateOwnerId(paramsParsed.data.workflowId)
+      if (workflowOwnerId === undefined) {
+        return reply.status(404).send({
+          ok: false,
+          error: {
+            message: 'Workflow template not found',
+          },
+        })
+      }
+
+      if (workflowOwnerId !== ownerId) {
+        return reply.status(403).send({
+          ok: false,
+          error: {
+            code: 'AUTHZ_FORBIDDEN',
+            message: 'Provider cannot update workflow template they do not own',
+            details: {
+              providedOwnerId: ownerId,
+              workflowOwnerId,
+            },
+          },
+        })
+      }
     }
 
     const template = await updateWorkflowTemplate({

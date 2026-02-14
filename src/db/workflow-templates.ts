@@ -3,6 +3,7 @@ import { pool } from './pool.js'
 export interface WorkflowTemplateRecord {
   workflowId: string
   name: string
+  ownerId: string | null
   description: string | null
   stepGraph: unknown
   defaultPolicies: unknown
@@ -14,6 +15,7 @@ export interface WorkflowTemplateRecord {
 export interface CreateWorkflowTemplateInput {
   workflowId: string
   name: string
+  ownerId?: string | null
   description?: string | null
   stepGraph: unknown
   defaultPolicies?: unknown
@@ -32,6 +34,7 @@ export interface UpdateWorkflowTemplateInput {
 interface WorkflowTemplateRow {
   workflow_id: string
   name: string
+  owner_id: string | null
   description: string | null
   step_graph_json: unknown
   default_policies_json: unknown
@@ -44,6 +47,7 @@ function toRecord(row: WorkflowTemplateRow): WorkflowTemplateRecord {
   return {
     workflowId: row.workflow_id,
     name: row.name,
+    ownerId: row.owner_id,
     description: row.description,
     stepGraph: row.step_graph_json,
     defaultPolicies: row.default_policies_json,
@@ -61,16 +65,18 @@ export async function createWorkflowTemplate(
       INSERT INTO workflow_templates (
         workflow_id,
         name,
+        owner_id,
         description,
         step_graph_json,
         default_policies_json,
         active,
         updated_at
       )
-      VALUES ($1, $2, $3, $4::jsonb, $5::jsonb, $6, NOW())
+      VALUES ($1, $2, $3, $4, $5::jsonb, $6::jsonb, $7, NOW())
       RETURNING
         workflow_id,
         name,
+        owner_id,
         description,
         step_graph_json,
         default_policies_json,
@@ -81,6 +87,7 @@ export async function createWorkflowTemplate(
     [
       input.workflowId,
       input.name,
+      input.ownerId ?? null,
       input.description ?? null,
       JSON.stringify(input.stepGraph),
       JSON.stringify(input.defaultPolicies ?? {}),
@@ -97,6 +104,7 @@ export async function getWorkflowTemplateById(workflowId: string): Promise<Workf
       SELECT
         workflow_id,
         name,
+        owner_id,
         description,
         step_graph_json,
         default_policies_json,
@@ -120,36 +128,32 @@ export async function getWorkflowTemplateById(workflowId: string): Promise<Workf
 export async function listWorkflowTemplates(params: {
   limit: number
   active?: boolean
+  ownerId?: string
 }): Promise<WorkflowTemplateRecord[]> {
-  const { limit, active } = params
+  const { limit, active, ownerId } = params
+
+  const conditions: string[] = []
+  const values: unknown[] = []
 
   if (typeof active === 'boolean') {
-    const result = await pool.query<WorkflowTemplateRow>(
-      `
-        SELECT
-          workflow_id,
-          name,
-          description,
-          step_graph_json,
-          default_policies_json,
-          active,
-          created_at,
-          updated_at
-        FROM workflow_templates
-        WHERE active = $1
-        ORDER BY updated_at DESC, workflow_id ASC
-        LIMIT $2
-      `,
-      [active, limit],
-    )
-    return result.rows.map(toRecord)
+    values.push(active)
+    conditions.push(`active = $${values.length}`)
   }
+
+  if (ownerId) {
+    values.push(ownerId)
+    conditions.push(`owner_id = $${values.length}`)
+  }
+
+  values.push(limit)
+  const whereClause = conditions.length > 0 ? `WHERE ${conditions.join(' AND ')}` : ''
 
   const result = await pool.query<WorkflowTemplateRow>(
     `
       SELECT
         workflow_id,
         name,
+        owner_id,
         description,
         step_graph_json,
         default_policies_json,
@@ -157,13 +161,32 @@ export async function listWorkflowTemplates(params: {
         created_at,
         updated_at
       FROM workflow_templates
+      ${whereClause}
       ORDER BY updated_at DESC, workflow_id ASC
-      LIMIT $1
+      LIMIT $${values.length}
     `,
-    [limit],
+    values,
   )
 
   return result.rows.map(toRecord)
+}
+
+export async function getWorkflowTemplateOwnerId(workflowId: string): Promise<string | null | undefined> {
+  const result = await pool.query<{ owner_id: string | null }>(
+    `
+      SELECT owner_id
+      FROM workflow_templates
+      WHERE workflow_id = $1
+      LIMIT 1
+    `,
+    [workflowId],
+  )
+
+  if (result.rowCount === 0) {
+    return undefined
+  }
+
+  return result.rows[0].owner_id
 }
 
 export async function updateWorkflowTemplate(
@@ -218,6 +241,7 @@ export async function updateWorkflowTemplate(
       RETURNING
         workflow_id,
         name,
+        owner_id,
         description,
         step_graph_json,
         default_policies_json,
