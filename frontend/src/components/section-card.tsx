@@ -1,6 +1,8 @@
+import type { ReactNode } from 'react'
+
 interface SectionCardProps {
   title: string
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function SectionCard({ title, children }: SectionCardProps) {

@@ -1,4 +1,5 @@
 import { AppShell } from '../components/app-shell'
+import { HealthCheckCard } from '../components/health-check-card'
 import { SectionCard } from '../components/section-card'
 
 const apiBase = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000'
@@ -29,6 +30,8 @@ export default function HomePage() {
           <li>FE-05: payments flow page</li>
         </ul>
       </SectionCard>
+
+      <HealthCheckCard />
     </AppShell>
   )
 }

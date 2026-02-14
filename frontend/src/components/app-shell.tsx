@@ -1,7 +1,8 @@
+import type { ReactNode } from 'react'
 import { TopNav } from './top-nav'
 
 interface AppShellProps {
-  children: React.ReactNode
+  children: ReactNode
 }
 
 export function AppShell({ children }: AppShellProps) {

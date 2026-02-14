@@ -114,6 +114,52 @@ h2 {
   box-shadow: var(--shadow-soft);
 }
 
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 14px;
+  font-weight: 600;
+  padding: 8px 12px;
+  cursor: pointer;
+}
+
+.btn:hover {
+  border-color: var(--accent);
+  color: var(--accent);
+}
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  padding: 6px 10px;
+  font-size: 13px;
+  margin: 0 0 12px;
+}
+
+.badge-idle,
+.badge-loading {
+  color: var(--muted);
+}
+
+.badge-ok {
+  color: #0f766e;
+  border-color: #99f6e4;
+  background: #f0fdfa;
+}
+
+.badge-error {
+  color: #be123c;
+  border-color: #fecdd3;
+  background: #fff1f2;
+}
+
 ul {
   margin: 0;
   padding-left: 20px;
