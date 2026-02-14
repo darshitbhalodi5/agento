@@ -1,5 +1,5 @@
 import { AppShell } from '../../components/app-shell'
-import { SectionCard } from '../../components/section-card'
+import { RegistryConsole } from '../../components/registry/registry-console'
 
 export default function RegistryPage() {
   return (
@@ -7,14 +7,12 @@ export default function RegistryPage() {
       <section className="hero">
         <p className="eyebrow">Registry</p>
         <h1>Service Discovery and Writes</h1>
-        <p className="subtitle">This page will be implemented in FE-06 with filters, ranking, and role-protected write actions.</p>
+        <p className="subtitle">
+          Filtered marketplace discovery and protected write actions are available through the shared session controls.
+        </p>
       </section>
-      <SectionCard title="Status">
-        <ul>
-          <li>Ticket: FE-06</li>
-          <li>State: planned</li>
-        </ul>
-      </SectionCard>
+
+      <RegistryConsole />
     </AppShell>
   )
 }
