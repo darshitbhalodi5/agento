@@ -1,5 +1,5 @@
 import { AppShell } from '../../components/app-shell'
-import { SectionCard } from '../../components/section-card'
+import { PaymentsConsole } from '../../components/payments/payments-console'
 
 export default function PaymentsPage() {
   return (
@@ -7,14 +7,12 @@ export default function PaymentsPage() {
       <section className="hero">
         <p className="eyebrow">Payments</p>
         <h1>Quote, Execute, and Request Status</h1>
-        <p className="subtitle">This page will be implemented in FE-05 using the shared API client and session headers.</p>
+        <p className="subtitle">
+          Full payment interaction flow is now available in Next.js using shared API client and session controls.
+        </p>
       </section>
-      <SectionCard title="Status">
-        <ul>
-          <li>Ticket: FE-05</li>
-          <li>State: planned</li>
-        </ul>
-      </SectionCard>
+
+      <PaymentsConsole />
     </AppShell>
   )
 }
