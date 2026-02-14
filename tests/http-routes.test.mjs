@@ -491,7 +491,7 @@ test('GET /v1/agent-keys rejects non-admin role', async () => {
       method: 'GET',
       url: '/v1/agent-keys',
       headers: {
-        'x-user-role': 'provider',
+        'x-user-role': 'viewer',
       },
     })
 
@@ -499,6 +499,51 @@ test('GET /v1/agent-keys rejects non-admin role', async () => {
     const body = res.json()
     assert.equal(body.ok, false)
     assert.equal(body.error.code, 'AUTHZ_FORBIDDEN')
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/agent-keys requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/agent-keys',
+      headers: {
+        'x-user-role': 'provider',
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
+  } finally {
+    await app.close()
+  }
+})
+
+test('POST /v1/registry/agents requires owner header for provider role', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'POST',
+      url: '/v1/registry/agents',
+      headers: {
+        'x-user-role': 'provider',
+      },
+      payload: {
+        id: 'agent-owner-required',
+        name: 'Agent Owner Required',
+        capabilities: [],
+      },
+    })
+
+    assert.equal(res.statusCode, 400)
+    const body = res.json()
+    assert.equal(body.ok, false)
   } finally {
     await app.close()
   }

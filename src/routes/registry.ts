@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import { listAgents, listRegistryServices, upsertAgent, upsertRegistryService } from '../db/registry.js'
-import { requireRoles } from '../middleware/authz.js'
+import { readOwnerIdFromHeader, readRoleFromHeader, requireRoles } from '../middleware/authz.js'
 
 const agentSchema = z.object({
   id: z.string().min(1),
@@ -64,6 +64,29 @@ export const registryRoutes: FastifyPluginAsync = async (app) => {
     const parsed = agentSchema.safeParse(request.body)
     if (!parsed.success) {
       return reply.status(400).send(fail('Invalid agent payload', parsed.error.flatten()))
+    }
+
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return reply.status(400).send(fail('Missing x-owner-id header for provider access'))
+      }
+
+      if (parsed.data.ownerId && parsed.data.ownerId !== ownerId) {
+        return reply.status(403).send(
+          fail('Provider cannot assign ownership to a different ownerId', {
+            providedOwnerId: ownerId,
+            payloadOwnerId: parsed.data.ownerId,
+          }),
+        )
+      }
+
+      await upsertAgent({
+        ...parsed.data,
+        ownerId,
+      })
+      return reply.status(200).send({ ok: true, agentId: parsed.data.id })
     }
 
     await upsertAgent(parsed.data)

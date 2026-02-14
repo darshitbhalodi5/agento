@@ -5,7 +5,7 @@ import { useSessionStore, type DemoUserRole } from '../../lib/session-store'
 const roleOptions: DemoUserRole[] = ['viewer', 'provider', 'admin']
 
 export function SessionControlsPanel() {
-  const { session, setApiBaseUrl, setAgentApiKey, setUserRole } = useSessionStore()
+  const { session, setApiBaseUrl, setAgentApiKey, setUserRole, setOwnerId } = useSessionStore()
 
   return (
     <section className="session-controls">
@@ -36,6 +36,11 @@ export function SessionControlsPanel() {
             </option>
           ))}
         </select>
+      </label>
+
+      <label>
+        Owner ID
+        <input value={session.ownerId} onChange={(event) => setOwnerId(event.target.value)} placeholder="provider_demo" />
       </label>
     </section>
   )

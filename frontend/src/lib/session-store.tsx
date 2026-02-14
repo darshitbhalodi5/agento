@@ -8,6 +8,7 @@ export interface SessionState {
   apiBaseUrl: string
   agentApiKey: string
   userRole: DemoUserRole
+  ownerId: string
 }
 
 interface SessionContextValue {
@@ -15,12 +16,14 @@ interface SessionContextValue {
   setApiBaseUrl: (value: string) => void
   setAgentApiKey: (value: string) => void
   setUserRole: (value: DemoUserRole) => void
+  setOwnerId: (value: string) => void
 }
 
 const defaultSession: SessionState = {
   apiBaseUrl: process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:3000',
   agentApiKey: 'agento-dev-agent-key',
   userRole: 'viewer',
+  ownerId: 'provider_demo',
 }
 
 const SessionContext = createContext<SessionContextValue | null>(null)
@@ -34,6 +37,7 @@ export function SessionProvider({ children }: { children: React.ReactNode }) {
       setApiBaseUrl: (apiBaseUrl) => setSession((prev) => ({ ...prev, apiBaseUrl })),
       setAgentApiKey: (agentApiKey) => setSession((prev) => ({ ...prev, agentApiKey })),
       setUserRole: (userRole) => setSession((prev) => ({ ...prev, userRole })),
+      setOwnerId: (ownerId) => setSession((prev) => ({ ...prev, ownerId })),
     }),
     [session],
   )
@@ -57,6 +61,11 @@ export function buildAuthHeaders(session: SessionState): Record<string, string> 
   const key = session.agentApiKey.trim()
   if (key.length > 0) {
     headers['x-agent-api-key'] = key
+  }
+
+  const ownerId = session.ownerId.trim()
+  if (ownerId.length > 0) {
+    headers['x-owner-id'] = ownerId
   }
 
   return headers

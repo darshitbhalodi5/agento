@@ -174,6 +174,24 @@ export async function listAgents(): Promise<AgentRecord[]> {
   }))
 }
 
+export async function getAgentOwnerId(agentId: string): Promise<string | null | undefined> {
+  const result = await pool.query<{ owner_id: string | null }>(
+    `
+      SELECT owner_id
+      FROM agents
+      WHERE id = $1
+      LIMIT 1
+    `,
+    [agentId],
+  )
+
+  if (result.rowCount === 0) {
+    return undefined
+  }
+
+  return result.rows[0].owner_id
+}
+
 export async function upsertRegistryService(input: {
   id: string
   name: string

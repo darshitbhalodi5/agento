@@ -11,6 +11,10 @@ interface AgentApiKeyRow {
   last_used_at: string | null
 }
 
+interface AgentApiKeyOwnerRow extends AgentApiKeyRow {
+  owner_id: string | null
+}
+
 export interface AgentApiKeyRecord {
   id: number
   agentId: string
@@ -99,6 +103,44 @@ export async function listAgentApiKeys(params: {
   return result.rows.map(toRecord)
 }
 
+export async function listAgentApiKeysByOwner(params: {
+  ownerId: string
+  agentId?: string
+  active?: boolean
+  limit: number
+}): Promise<AgentApiKeyRecord[]> {
+  const { ownerId, agentId, active, limit } = params
+
+  const clauses: string[] = ['a.owner_id = $1']
+  const values: unknown[] = [ownerId]
+
+  if (agentId) {
+    values.push(agentId)
+    clauses.push(`k.agent_id = $${values.length}`)
+  }
+
+  if (typeof active === 'boolean') {
+    values.push(active)
+    clauses.push(`k.active = $${values.length}`)
+  }
+
+  values.push(limit)
+
+  const result = await pool.query<AgentApiKeyOwnerRow>(
+    `
+      SELECT k.id, k.agent_id, k.api_key, k.active, k.created_at, k.updated_at, k.last_used_at, a.owner_id
+      FROM agent_api_keys k
+      JOIN agents a ON a.id = k.agent_id
+      WHERE ${clauses.join(' AND ')}
+      ORDER BY k.created_at DESC, k.id DESC
+      LIMIT $${values.length}
+    `,
+    values,
+  )
+
+  return result.rows.map(toRecord)
+}
+
 export async function createAgentApiKey(input: {
   agentId: string
   apiKey?: string
@@ -136,6 +178,25 @@ export async function revokeAgentApiKeyById(id: number): Promise<AgentApiKeyReco
   }
 
   return toRecord(result.rows[0])
+}
+
+export async function getAgentApiKeyOwnerById(id: number): Promise<string | null | undefined> {
+  const result = await pool.query<{ owner_id: string | null }>(
+    `
+      SELECT a.owner_id
+      FROM agent_api_keys k
+      JOIN agents a ON a.id = k.agent_id
+      WHERE k.id = $1
+      LIMIT 1
+    `,
+    [id],
+  )
+
+  if (result.rowCount === 0) {
+    return undefined
+  }
+
+  return result.rows[0].owner_id
 }
 
 export async function rotateAgentApiKeyById(id: number): Promise<{
