@@ -53,6 +53,24 @@ Backend CORS compatibility for separate frontend origin:
 - Set `FRONTEND_ORIGINS` in backend `.env` (comma-separated origins).
 - Default is `http://localhost:3001`.
 
+## Full Monorepo Run (Backend + Frontend)
+Terminal A:
+```bash
+cd /home/db/agento
+npm run dev:backend
+```
+
+Terminal B:
+```bash
+cd /home/db/agento
+npm run dev:frontend
+```
+
+Optional frontend smoke:
+```bash
+npm run test:frontend:smoke
+```
+
 ## Quote API Quick Test
 1. Insert one active service in Postgres:
 ```sql

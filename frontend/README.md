@@ -33,7 +33,8 @@ npm run test:smoke
 
 Manual checklist:
 - `frontend/tests/SMOKE_CHECKLIST.md`
+- `frontend/DEMO_RUNBOOK.md`
 
 ## Current Status
-- FE-01 bootstrap completed.
-- Feature pages and API integrations are tracked in `/home/db/agento-frontend-executable-tickets.md`.
+- Frontend execution track FE-00 through FE-12 is complete.
+- Ticket source of truth: `/home/db/agento-frontend-executable-tickets.md`.
