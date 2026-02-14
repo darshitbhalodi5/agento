@@ -31,7 +31,6 @@ The frontend is for interaction and demo UX.
 - `npm run db:check` - verify Postgres connectivity
 - `npm run db:migrate` - apply SQL migrations
 - `npm test` - run route tests
-- `npm run demo` - run demo curl flow script
 
 Frontend-specific:
 - `npm run install:frontend`
@@ -360,18 +359,3 @@ Run:
 ```bash
 npm test
 ```
-
-## Step 10 Demo Script
-Script:
-```bash
-scripts/demo_flow.sh
-```
-
-Run:
-```bash
-npm run demo
-```
-
-Notes:
-- set `PAYMENT_TX_HASH` to a real Tempo transfer hash for end-to-end execute success
-- set `REQUEST_ID` for unique runs
