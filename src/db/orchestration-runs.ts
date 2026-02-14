@@ -169,6 +169,89 @@ export async function listOrchestrationRuns(limit = 30): Promise<OrchestrationRu
   }))
 }
 
+export interface OrchestrationRunSummary {
+  runId: string
+  workflowId: string
+  ok: boolean
+  runStatus: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+  createdAt: string
+  startedAt: string | null
+  completedAt: string | null
+  durationMs: number | null
+  stepCount: number
+  successfulStepCount: number
+  attemptCount: number
+  selectedProviders: string[]
+  errorMessage: string | null
+}
+
+export async function getOrchestrationRunSummary(runId: string): Promise<OrchestrationRunSummary | null> {
+  const result = await pool.query<{
+    run_id: string
+    workflow_id: string
+    ok: boolean
+    run_status: 'queued' | 'running' | 'completed' | 'failed' | 'cancelled'
+    created_at: string
+    started_at: string | null
+    completed_at: string | null
+    duration_ms: string | null
+    step_count: string
+    successful_step_count: string
+    attempt_count: string
+    selected_providers: string[] | null
+    error_message: string | null
+  }>(
+    `
+      SELECT
+        r.run_id,
+        r.workflow_id,
+        r.ok,
+        r.run_status,
+        r.created_at,
+        r.started_at,
+        r.completed_at,
+        CASE
+          WHEN r.started_at IS NULL OR r.completed_at IS NULL THEN NULL
+          ELSE (EXTRACT(EPOCH FROM (r.completed_at - r.started_at)) * 1000)::text
+        END AS duration_ms,
+        COUNT(DISTINCT so.step_id)::text AS step_count,
+        COUNT(DISTINCT so.step_id) FILTER (WHERE so.succeeded)::text AS successful_step_count,
+        COUNT(sa.id)::text AS attempt_count,
+        ARRAY_REMOVE(ARRAY_AGG(DISTINCT so.chosen_service_id), NULL) AS selected_providers,
+        r.error_message
+      FROM orchestration_runs r
+      LEFT JOIN orchestration_step_outcomes so ON so.run_id = r.run_id
+      LEFT JOIN orchestration_step_attempts sa ON sa.run_id = r.run_id
+      WHERE r.run_id = $1
+      GROUP BY
+        r.run_id, r.workflow_id, r.ok, r.run_status, r.created_at, r.started_at, r.completed_at, r.error_message
+      LIMIT 1
+    `,
+    [runId],
+  )
+
+  if ((result.rowCount ?? 0) === 0) {
+    return null
+  }
+
+  const row = result.rows[0]
+  return {
+    runId: row.run_id,
+    workflowId: row.workflow_id,
+    ok: row.ok,
+    runStatus: row.run_status,
+    createdAt: row.created_at,
+    startedAt: row.started_at,
+    completedAt: row.completed_at,
+    durationMs: row.duration_ms === null ? null : Number(row.duration_ms),
+    stepCount: Number(row.step_count),
+    successfulStepCount: Number(row.successful_step_count),
+    attemptCount: Number(row.attempt_count),
+    selectedProviders: row.selected_providers ?? [],
+    errorMessage: row.error_message,
+  }
+}
+
 export async function markOrchestrationRunRunning(runId: string) {
   await pool.query(
     `

@@ -1,6 +1,7 @@
 import type { FastifyPluginAsync } from 'fastify'
 import { z } from 'zod'
 import {
+  getOrchestrationRunSummary,
   getOrchestrationTimeline,
   listOrchestrationRuns,
   requestOrchestrationRunCancellation,
@@ -85,6 +86,38 @@ export const orchestrationRoutes: FastifyPluginAsync = async (app) => {
       ok: true,
       runId: parsed.data.runId,
       timeline,
+    })
+  })
+
+  app.get('/orchestrations/runs/:runId/summary', async (request, reply) => {
+    const paramsSchema = z.object({
+      runId: z.string().min(1),
+    })
+
+    const parsed = paramsSchema.safeParse(request.params)
+    if (!parsed.success) {
+      return reply.status(400).send({
+        ok: false,
+        error: {
+          message: 'Invalid run id params',
+          details: parsed.error.flatten(),
+        },
+      })
+    }
+
+    const summary = await getOrchestrationRunSummary(parsed.data.runId)
+    if (!summary) {
+      return reply.status(404).send({
+        ok: false,
+        error: {
+          message: 'Run not found',
+        },
+      })
+    }
+
+    return reply.status(200).send({
+      ok: true,
+      summary,
     })
   })
 

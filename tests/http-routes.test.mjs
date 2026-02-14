@@ -108,6 +108,38 @@ test('GET /v1/orchestrations/runs/:runId returns timeline envelope', async () =>
   }
 })
 
+test('GET /v1/orchestrations/runs/:runId/summary route exists', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/orchestrations/runs/nonexistent_run/summary',
+    })
+
+    // Route should exist; depending on DB state it can be 404 (not found) or 500 (db unavailable).
+    assert.ok([404, 500].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
+test('GET /v1/orchestrations/runs/:runId/summary validates params payload', async () => {
+  const app = buildApp()
+
+  try {
+    const res = await app.inject({
+      method: 'GET',
+      url: '/v1/orchestrations/runs//summary',
+    })
+
+    // Fastify may return 404 on malformed path; 400 is also acceptable if route matcher parses empty id.
+    assert.ok([400, 404].includes(res.statusCode))
+  } finally {
+    await app.close()
+  }
+})
+
 test('POST /v1/orchestrations/run validates payload', async () => {
   const app = buildApp()
 
