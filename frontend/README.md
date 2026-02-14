@@ -25,6 +25,15 @@ App URL:
 - `NEXT_PUBLIC_API_BASE_URL` (default from `.env.example`: `http://localhost:3000`)
 - Ensure backend `.env` includes `FRONTEND_ORIGINS=http://localhost:3001` (or your frontend origin) for CORS.
 
+## QA
+Automated smoke harness:
+```bash
+npm run test:smoke
+```
+
+Manual checklist:
+- `frontend/tests/SMOKE_CHECKLIST.md`
+
 ## Current Status
 - FE-01 bootstrap completed.
 - Feature pages and API integrations are tracked in `/home/db/agento-frontend-executable-tickets.md`.

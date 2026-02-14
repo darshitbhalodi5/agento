@@ -14,6 +14,7 @@
     "build:frontend": "npm --prefix frontend run build",
     "start:frontend": "npm --prefix frontend run start",
     "install:frontend": "npm --prefix frontend install",
+    "test:frontend:smoke": "npm --prefix frontend run test:smoke",
     "build": "tsc -p tsconfig.json",
     "start": "node dist/server.js",
     "check": "tsc --noEmit",
