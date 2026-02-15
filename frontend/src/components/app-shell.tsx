@@ -1,5 +1,4 @@
 import type { ReactNode } from 'react'
-import { WalkthroughPanel } from './demo/walkthrough-panel'
 import { SessionControlsPanel } from './session-controls/panel'
 import { TopNav } from './top-nav'
 
@@ -12,7 +11,6 @@ export function AppShell({ children }: AppShellProps) {
     <main className="page">
       <TopNav />
       <SessionControlsPanel />
-      <WalkthroughPanel />
       {children}
     </main>
   )

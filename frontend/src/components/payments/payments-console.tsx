@@ -53,6 +53,7 @@ export function PaymentsConsole() {
   const [quoteOut, setQuoteOut] = useState('No quote yet.')
   const [executeOut, setExecuteOut] = useState('No execute response yet.')
   const [statusOut, setStatusOut] = useState('No status response yet.')
+  const [simulateOut, setSimulateOut] = useState('No simulated payment yet.')
 
   async function runQuote() {
     const result = await apiPost('/v1/payments/quote', quoteForm, {
@@ -94,6 +95,36 @@ export function PaymentsConsole() {
       headers,
     })
     setExecuteOut(pretty(result.ok ? result.data : result))
+  }
+
+  async function runSimulatePayment() {
+    const result = await apiPost<{
+      simulation?: {
+        paymentTxHash?: string
+      }
+    }>(
+      '/v1/payments/simulate',
+      {
+        serviceId: executeForm.serviceId,
+        requestId: executeForm.requestId,
+      },
+      {
+        baseUrl: session.apiBaseUrl,
+        headers,
+      },
+    )
+
+    setSimulateOut(pretty(result.ok ? result.data : result))
+
+    if (result.ok && result.data.simulation?.paymentTxHash) {
+      const txHash = result.data.simulation.paymentTxHash
+      setExecuteForm((prev) => ({ ...prev, paymentTxHash: txHash }))
+      setStatusForm((prev) => ({
+        ...prev,
+        serviceId: executeForm.serviceId,
+        requestId: executeForm.requestId,
+      }))
+    }
   }
 
   async function runStatus() {
@@ -221,6 +252,10 @@ export function PaymentsConsole() {
           <button type="button" className="btn" onClick={runExecute}>
             Verify + Execute
           </button>
+          <button type="button" className="btn" onClick={runSimulatePayment}>
+            Simulate On-chain Payment
+          </button>
+          <pre className="result">{simulateOut}</pre>
           <pre className="result">{executeOut}</pre>
         </article>
 

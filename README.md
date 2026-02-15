@@ -102,6 +102,10 @@ Current behavior:
 - writes execution success/failure into audit log
 - returns structured error model on any failure path
 
+Dev simulation helper:
+- `POST /v1/payments/simulate` creates a simulated payment record and returns a synthetic `paymentTxHash` that can be used with execute.
+- controlled by `ENABLE_PAYMENT_SIMULATION` (default true outside production).
+
 Example:
 ```bash
 curl -s -X POST http://localhost:3000/v1/payments/execute \

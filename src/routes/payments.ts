@@ -1,7 +1,7 @@
 import type { FastifyPluginAsync, FastifyReply } from 'fastify'
 import { z } from 'zod'
 import { env } from '../config/env.js'
-import { getActiveServiceById } from '../db/services.js'
+import { getActiveServiceById, getServiceOwnerId } from '../db/services.js'
 import { insertUsageLedgerEntry } from '../db/usage-ledger.js'
 import {
   createPendingApiRequest,
@@ -13,8 +13,10 @@ import {
 } from '../db/api-requests.js'
 import { executeDownstreamCall } from '../services/downstream-client.js'
 import { verifyPaymentTx } from '../services/payment-verification.js'
+import { createSimulatedPayment } from '../services/payment-simulator.js'
 import { evaluateServicePolicyForExecute } from '../services/policy-engine.js'
 import { requireAgentApiKey } from '../middleware/agent-auth.js'
+import { readOwnerIdFromHeader, readRoleFromHeader, requireRoles } from '../middleware/authz.js'
 
 const apiErrorCodeSchema = z.enum([
   'VALIDATION_ERROR',
@@ -58,6 +60,13 @@ const executeRequestSchema = z.object({
   payload: z.record(z.string(), z.unknown()),
 })
 
+const simulatePaymentSchema = z.object({
+  serviceId: z.string().min(1),
+  requestId: z.string().min(1).max(128),
+  amountAtomic: z.string().regex(/^\d+$/).optional(),
+  payerAddress: z.string().regex(/^0x[a-fA-F0-9]{40}$/).optional(),
+})
+
 function sendError(
   reply: FastifyReply,
   statusCode: number,
@@ -78,6 +87,74 @@ function sendError(
 }
 
 export const paymentRoutes: FastifyPluginAsync = async (app) => {
+  app.post('/payments/simulate', { preHandler: requireRoles('admin', 'provider') }, async (request, reply) => {
+    if (!env.ENABLE_PAYMENT_SIMULATION) {
+      return sendError(reply, 403, 'VERIFICATION_NOT_IMPLEMENTED', 'Payment simulation is disabled')
+    }
+
+    const parsed = simulatePaymentSchema.safeParse(request.body)
+    if (!parsed.success) {
+      return sendError(
+        reply,
+        400,
+        'VALIDATION_ERROR',
+        'Invalid simulate payment payload',
+        undefined,
+        parsed.error.flatten(),
+      )
+    }
+
+    const { serviceId, requestId } = parsed.data
+    const service = await getActiveServiceById(serviceId)
+    if (!service) {
+      return sendError(reply, 404, 'SERVICE_NOT_FOUND', 'Service does not exist', requestId)
+    }
+    if (!service.active) {
+      return sendError(reply, 403, 'SERVICE_INACTIVE', 'Service is not active', requestId)
+    }
+
+    const role = readRoleFromHeader(request)
+    if (role === 'provider') {
+      const ownerId = readOwnerIdFromHeader(request)
+      if (!ownerId) {
+        return sendError(reply, 400, 'VALIDATION_ERROR', 'Missing x-owner-id header for provider access', requestId)
+      }
+      const serviceOwnerId = await getServiceOwnerId(serviceId)
+      if (serviceOwnerId !== undefined && serviceOwnerId !== ownerId) {
+        return reply.status(403).send({
+          ok: false,
+          requestId,
+          error: {
+            code: 'AUTHZ_FORBIDDEN',
+            message: 'Provider cannot simulate payments for services they do not own',
+            details: { providedOwnerId: ownerId, serviceOwnerId },
+          },
+        })
+      }
+    }
+
+    const simulated = createSimulatedPayment({
+      service,
+      requestId,
+      amountAtomic: parsed.data.amountAtomic ?? service.priceAtomic,
+      payerAddress: parsed.data.payerAddress ?? env.SIMULATED_PAYER_ADDRESS,
+    })
+
+    return reply.status(201).send({
+      ok: true,
+      requestId,
+      simulation: {
+        paymentTxHash: simulated.paymentTxHash,
+        payer: simulated.payer,
+        recipient: simulated.recipient,
+        amountAtomic: simulated.amountAtomic,
+        token: simulated.token,
+        memo: simulated.memo,
+        simulated: true,
+      },
+    })
+  })
+
   app.get('/requests/:requestId', async (request, reply) => {
     const paramsSchema = z.object({
       requestId: z.string().min(1),

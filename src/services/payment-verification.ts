@@ -1,6 +1,7 @@
 import { createPublicClient, getAddress, http, keccak256, parseEventLogs, stringToHex } from 'viem'
 import { env } from '../config/env.js'
 import type { ServiceRecord } from '../db/services.js'
+import { getSimulatedPayment } from './payment-simulator.js'
 
 const transferWithMemoAbi = [
   {
@@ -58,6 +59,67 @@ export async function verifyPaymentTx(params: {
   service: ServiceRecord
 }): Promise<VerificationResult> {
   const { paymentTxHash, requestId, service } = params
+  if (env.ENABLE_PAYMENT_SIMULATION) {
+    const simulated = getSimulatedPayment(paymentTxHash)
+    if (simulated) {
+      const serviceToken = normalizeAddress(service.tokenAddress)
+      const providerWallet = normalizeAddress(service.providerWallet)
+      const minAmount = BigInt(service.priceAtomic)
+      const paidAmount = BigInt(simulated.amountAtomic)
+      const expectedMemo = buildExpectedMemo(service, requestId)
+
+      if (simulated.token.toLowerCase() !== serviceToken.toLowerCase()) {
+        return {
+          ok: false,
+          code: 'PAYMENT_TOKEN_MISMATCH',
+          message: 'Simulated payment token does not match configured service token',
+        }
+      }
+
+      if (simulated.recipient.toLowerCase() !== providerWallet.toLowerCase()) {
+        return {
+          ok: false,
+          code: 'PAYMENT_RECIPIENT_MISMATCH',
+          message: 'Simulated payment recipient does not match configured provider wallet',
+          details: {
+            simulatedRecipient: simulated.recipient,
+            configuredRecipient: providerWallet,
+            simulatedServiceId: simulated.serviceId,
+            executeServiceId: service.id,
+          },
+        }
+      }
+
+      if (paidAmount < minAmount) {
+        return {
+          ok: false,
+          code: 'PAYMENT_INSUFFICIENT',
+          message: 'Simulated payment amount is below service price',
+          details: { paid: paidAmount.toString(), required: minAmount.toString() },
+        }
+      }
+
+      if (simulated.memo.toLowerCase() !== expectedMemo.toLowerCase()) {
+        return {
+          ok: false,
+          code: 'MEMO_MISMATCH',
+          message: 'Simulated payment memo does not match expected request binding',
+          details: { expectedMemo, actualMemo: simulated.memo },
+        }
+      }
+
+      return {
+        ok: true,
+        details: {
+          payer: simulated.payer,
+          recipient: simulated.recipient,
+          amountAtomic: simulated.amountAtomic,
+          token: simulated.token,
+          memo: simulated.memo,
+        },
+      }
+    }
+  }
 
   const receipt = await publicClient.getTransactionReceipt({ hash: paymentTxHash }).catch(() => null)
 

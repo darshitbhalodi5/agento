@@ -116,6 +116,12 @@ export function RegistryConsole() {
   }
 
   async function createAgent() {
+    const providerOwnerId = session.ownerId.trim()
+    const payloadOwnerId =
+      session.userRole === 'provider'
+        ? providerOwnerId || undefined
+        : agentForm.ownerId || undefined
+
     const result = await apiPost(
       '/v1/registry/agents',
       {
@@ -123,7 +129,7 @@ export function RegistryConsole() {
         name: agentForm.name,
         endpoint: agentForm.endpoint || undefined,
         capabilities: parseCsv(agentForm.capabilities),
-        ownerId: agentForm.ownerId || undefined,
+        ownerId: payloadOwnerId,
         description: agentForm.description || undefined,
         docsUrl: agentForm.docsUrl || undefined,
         websiteUrl: agentForm.websiteUrl || undefined,

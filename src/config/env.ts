@@ -16,6 +16,8 @@ const envSchema = z.object({
     .url()
     .default('http://localhost:3000/v1/internal/mock/execute'),
   INTERNAL_API_KEY: z.string().min(1).default('agento-dev-key'),
+  ENABLE_PAYMENT_SIMULATION: z.coerce.boolean().default(process.env.NODE_ENV !== 'production'),
+  SIMULATED_PAYER_ADDRESS: z.string().default('0x88FB1167B01EcE2CAEe65c4E193Ba942D6F73d70'),
 })
 
 export const env = envSchema.parse(process.env)
